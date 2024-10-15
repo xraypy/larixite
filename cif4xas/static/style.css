@@ -4,7 +4,7 @@ h1         {border-bottom: 1px solid #eee; }
 h2         {font-size: 1.2em; }
 
 .body  { font-family: sans-serif; margin:5px; padding:2px;
-	 background-color: #FFF; font: 12px verdana, sans-serif;}
+         background-color: #FFF; font: 12px verdana, sans-serif;}
 
 .body a, a.active {color: #16C; text-decoration: none; }
 .body a.active    {color: #C61;  background-color: #FDFDFA;}
@@ -35,7 +35,7 @@ table td, table td * {     vertical-align: top; }
 .subtitle {font:bold 16px verdana, arial, sans-serif;color:#CC0000;}
 
 .confirm {font-family: sans-serif; margin:5px; padding:2px;
-	  background-color: #FFFFFF; font:bold 14px verdana,sans-serif;}
+          background-color: #FFFFFF; font:bold 14px verdana,sans-serif;}
 .confirm a, a.active {color: #444AAA;  font:bold 14px verdana,sans-serif;}
 
 pre {text-indent: 16px}
@@ -54,16 +54,16 @@ h2 {font:bold 18px verdana,arial,sans-serif;color:#044484;font-weight:bold;}
 .elem a:hover  {color: #C61;  background-color: #F0F0F6;}
 
 .topbar {font: bold 16px verdana, arial, sans-serif;
-	 padding: 2px 4px 4px 4px;text-decoration: none;
-	 color: #FFF;   background-color: #16C;}
+         padding: 2px 4px 4px 4px;text-decoration: none;
+         color: #FFF;   background-color: #175;}
 
-.topbar a        {background-color: #16C; color: #FEA; margin: 5px 5px 5px 5px;}
+.topbar a        {background-color: #175; color: #FEA; margin: 5px 5px 5px 5px;}
 .topbar a:hover  {background-color: #27D; color: #FAF0C0;
-		  transition: 0.5s ease-in;
-		  margin: 5px 5px 5px 5px;}
+                  transition: 0.5s ease-in;
+                  margin: 5px 5px 5px 5px;}
 
 .topmenu { font: bold 13px verdana, arial, sans-serif; margin: 0px;
-           padding: 0px 0px 16px 0px;   border: 3px solid #16C;
+           padding: 0px 0px 16px 0px;   border: 3px solid #175;
            background-color: #FDFDFD;}
 
 .topmenu ul {margin: 0px;  padding: 0px}
@@ -74,10 +74,10 @@ h2 {font:bold 18px verdana,arial,sans-serif;color:#044484;font-weight:bold;}
              padding: 0px 10px 0px 10px;
              color: #FEA;   background-color: #F6F6F9;}
 
-.topmenu a, a.active {color: #16C; }
-.topmenu a.active    {color: #16C; background-color: #FE9;}
-.topmenu a:hover     {color: #16C; background-color: #FE9; transition: 0.5s ease-in; }
-.topmenu li:hover    {color: #16C; background-color: #FE9; transition: 1.0s ease-in; }
+.topmenu a, a.active {color: #175; }
+.topmenu a.active    {color: #175; background-color: #FE9;}
+.topmenu a:hover     {color: #175; background-color: #FE9; transition: 0.5s ease-in; }
+.topmenu li:hover    {color: #175; background-color: #FE9; transition: 1.0s ease-in; }
 
 .abutton {
     font: 12px verdana, sans-serif;

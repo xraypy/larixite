@@ -142,7 +142,7 @@ def feffinp(cifid=None, absorber=None, edge='K', cluster_size=7.0,
     try:
         stoich = chemparse(absorber)
     except ValueError:
-s        if ( ('M' in absorber)
+        if ( ('M' in absorber)
              and (not absorber.startswith('Mo'))
              and (not absorber.startswith('Mn'))):
             try:
