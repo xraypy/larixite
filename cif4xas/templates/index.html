@@ -1,0 +1,135 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<p>
+
+<div class=body>
+  {% if errors %}
+  {% for e in range(errors) %}
+  <p>{{message[e]}}</p>
+  {% endfor %}
+  {% endif %}
+
+ <table cellpadding=2 border=0>
+
+   <tr> <td  style="width: 350px;" >
+       <div class=subtitle> Select a Structure File  </div>
+
+    <table cellpadding=2 border=0>
+       {% for cifid, labels in cifdict.items() %}
+           <tr class={{ loop.cycle('odd', 'even') }}>
+             <td><a href="{{url_for('index', cifid=cifid)}}">{{labels[0]}}
+                 <br>   &nbsp;  &nbsp; {{ labels[1] }} </a>
+             </td>
+           </tr>
+       {% endfor %}
+      </table>
+     </td>
+
+     <td>
+
+       <div class=subtitle> Search the American Mineralogis Crystal
+         Structure Database </div>
+
+  <form action="{{url_for('index')}}" method="post">
+
+    <table cellpadding=2 border=0>
+      <tr>
+        <td><label for="mineral">Mineral Name:</label></td>
+        <td><input style="width: 250px;" type="text" id="mineral"
+                   name="mineral" value="{{ mineral }}">
+        </td><td> (example: hem*) </td>
+      </tr>
+      <tr>
+        <td><label for="elems_in">Include   Elements:</label></td>
+        <td><input style="width: 250px;" type="text" id="elems_in"
+                   name="elems_in" value="{{ elems_in }}">
+        </td><td>(example: O, Fe, Si)</td>
+      </tr>
+      <tr>
+        <td><label for="elems_out">Exclude Elements:</label></td>
+        <td><input style="width: 250px;" type="text" id="elems_out"
+                   name="elems_out" value="{{ elems_out }}">
+        </td><td> </td>
+      </tr>
+      <tr>
+        <td>  <input type="submit" name="search" value="Search for CIFs"></td>
+        <td colspan=2>  <input type="checkbox" id="strict" name="strict"
+                               {% if strict  %} checked="checked" {% endif %}       >
+         <label for="strict">Include only the elements listed</label> </td>
+      </tr>
+    </table>
+  </form>
+  <hr>
+
+  {% if cifid %}
+
+  Generate XAS Input File
+
+    <form action="{{url_for('index')}}" method="post">
+
+    <table cellpadding=2 border=0>
+      <tr>
+        <td> <label for="absorbing_atom">Absorbing Atom:</label></td>
+        <td>
+          <select name="absorbing_atom" id="absorbing_atom"  style="width: 75px;">
+            {% for elem in atoms %}
+            <option value="{{elem}}" {% if elem == absorber %} selected {% endif %}> {{elem}}</option>
+            {% endfor %}
+        </td>
+        <td><label for="edge">Edge: </label></td>
+        <td>
+          <select name="edge" id="edge"  style="width: 75px;">
+            {% for ename in edges %}
+            <option value="{{ename}}" {% if ename == edge %} selected {% endif %}> {{ename}}</option>
+['            {% endfor %}
+        </td>
+        <td><label for="cluster_size">Cluster Size (Ang): </label></td>
+        <td>
+        <td><input style="width: 75px;" type="number" id="cluster_size"
+                   name="cluster_size" value="{{ cluster_size }}" step=0.1>
+        </td>
+
+      </tr>
+      <tr>
+        <td colspan=2>
+          <input type="submit" name="feff" value="Generate Feff Input">
+        </td>
+        <td colspan=2>
+          <input type="submit" name="fdmnes" value="Generate FDMNES Input">
+        </td>
+        <td colspan=2>  <input type="checkbox" id="with_h" name="with_h"
+                               {% if with_h  %} checked="checked" {% endif %}       >
+         <label for="with_h">Include H atoms</label> </td>
+      </tr>
+      <tr>
+        <td colspan=4>
+
+          {% if feff_fname  %}
+          <p>
+            <font size+=2> Click to Download
+          <a  href="{{url_for('feffinp',  cifid= cifid,  absorber=absorber,
+                   edge=edge,  cluster_size=cluster_size,  with_h=with_h,
+                   fname=feff_fname ) }}"> {{ feff_fname }} </a>
+          </font>
+            </p>
+          {% endif %}
+
+        </td>
+        </tr>
+    </table>
+
+    <hr>
+     CIF Text: <br>
+    <pre>{{ ciftext  }}</pre>
+
+  {% endif %}
+
+   </td>
+   </tr>
+ </table>
+     <hr>
+
+</div>
+
+{% endblock %}
