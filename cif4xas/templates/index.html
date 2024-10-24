@@ -72,24 +72,31 @@
       <tr>
         <td> <label for="absorbing_atom">Absorbing Atom:</label></td>
         <td>
-          <select name="absorbing_atom" id="absorbing_atom"  style="width: 75px;">
+          <select name="absorbing_atom" id="absorbing_atom"  style="width: 100px;">
             {% for elem in atoms %}
             <option value="{{elem}}" {% if elem == absorber %} selected {% endif %}> {{elem}}</option>
             {% endfor %}
         </td>
+        <td> <label for="crystal_site">Crystal Site:</label></td>
+        <td>
+          <select name="crystal_site" id="crystal_site"  style="width: 200px;">
+            {% for sname in xtal_sites %}
+            <option value="{{sname}}" {% if ename == xtal_site %} selected {% endif %}> {{sname}}</option>
+            {% endfor %}
+        </td>
+      </tr>
+      <tr>
         <td><label for="edge">Edge: </label></td>
         <td>
-          <select name="edge" id="edge"  style="width: 75px;">
+          <select name="edge" id="edge"  style="width: 100px;">
             {% for ename in edges %}
             <option value="{{ename}}" {% if ename == edge %} selected {% endif %}> {{ename}}</option>
-['            {% endfor %}
+            {% endfor %}
         </td>
-        <td><label for="cluster_size">Cluster Size (Ang): </label></td>
-        <td>
-        <td><input style="width: 75px;" type="number" id="cluster_size"
+        <td><label for="cluster_size">Cluster Size (Ang): </label></td><td>
+            <input style="width: 100px;" type="number" id="cluster_size"
                    name="cluster_size" value="{{ cluster_size }}" step=0.1>
-        </td>
-
+            </td>
       </tr>
       <tr>
         <td colspan=2>
@@ -109,7 +116,7 @@
           <p>
             <font size+=2> Click to Download
           <a  href="{{url_for('feffinp',  cifid= cifid,  absorber=absorber,
-                   edge=edge,  cluster_size=cluster_size,  with_h=with_h,
+                   site=site_index, edge=edge,  cluster_size=cluster_size,  with_h=with_h,
                    fname=feff_fname ) }}"> {{ feff_fname }} </a>
           </font>
             </p>

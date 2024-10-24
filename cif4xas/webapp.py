@@ -9,7 +9,7 @@ from flask import (Flask, redirect, url_for, render_template,
 
 import larch
 from larch.xrd import get_amcsd
-from larch.xrd.cif2feff import cif2feffinp, cif_sites
+from larch.xrd.cif2feff import cif2feffinp, cif_cluster
 from xraydb import atomic_number
 from xraydb.chemparser import chemparse
 
@@ -39,7 +39,11 @@ def connect(session, force_refresh=False):
                    'with_h': False,
                    'edges': ['K', 'L3', 'L2', 'L1', 'M5', 'M4', 'M3'],
                    'cluster_size': 7.0,
+                   'cif_cluster' :None,
                    'ciftext' : '',
+                   'all_sites': '',
+                   'xtal_site': '',
+                   'xtal_sites': [],
                    'absorber': '',
                    'edge': '',
                    'feff_fname': '',
@@ -62,12 +66,23 @@ def index(cifid=None):
         config['cifid'] = cifid
 
         cif = cifdb.get_cif(cifid)
+        cluster = cif_cluster(cif.ciftext)
+
         config['ciftext'] = f"\n{cif.ciftext.strip()}"
         config['atoms'] = []
-        config['feff_fname'] = ''
-        for at in cif.atoms_sites:
+        config['xtal_sites'] = ['']
+        config['xtal_site'] = ''
+        config['all_sites'] = cluster.all_sites
+
+        for at in chemparse(cif.formula.replace(' ', '')):
             if at not in ('H', 'D') and at not in config['atoms']:
                 config['atoms'].append(at)
+        # print(' Atoms ', config['atoms'], cluster.all_sites)
+        if len(config['atoms']) > 0:
+            config['xtal_sites'] = list(cluster.all_sites[config['atoms'][0]].keys())
+            config['xtal_site'] =  config['xtal_sites'][0]
+        print('> >' , config['xtal_sites'], config['xtal_site'], cluster.unique_sites)
+
 
     if request.method == 'POST':
         if 'search' in request.form.keys():
@@ -108,6 +123,8 @@ def index(cifid=None):
                     print("could not add cif ", cif)
             config['cifdict'] = cifdict
             config['cifid'] = cifid  = None
+            config['xtal_site'] = ''
+            config['xtal_sites'] = ['']
             config['ciftext'] = ''
             config['atoms'] = []
             config['feff_fname'] = ''
@@ -115,19 +132,30 @@ def index(cifid=None):
         elif 'feff' in request.form.keys():
             config['absorber'] =  request.form.get('absorbing_atom')
             config['edge'] = request.form.get('edge')
+            config['xtal_site'] = request.form.get('crystal_site')
             config['with_h'] = 1 if request.form.get('with_h') else 0
             config['cluster_size'] = request.form.get('cluster_size')
-
             absorber = config['absorber']
             edge = config['edge']
             cifid = config['cifid']
-            config['feff_fname'] = f'feff_CIF{cifid}_{absorber}_{edge}.inp'
+            if cifid is not None and config['all_sites'] is None:
+                cif = cifdb.get_cif(cifid)
+                cluster = cif_cluster(cif.ciftext)
+                config['all_sites'] = cluster.all_sites
 
+            self.absorber_sites = cluster.all_sites[catom]
+            print("FEFF -> ", cifid, config['xtal_site'])
+            site = config['all_sites'][absorber][config['xtal_site']]
+            print("FEFF -> ", cifid, config['xtal_site'], site)
+            config['site_index'] = int(site)
+            config['feff_fname'] = f'feff_CIF{cifid}_{absorber}{site}_{edge}.inp'
+
+    print("CIF ALL SITES ", config['cifid'], config['all_sites'])
     return render_template('index.html', **config)
 
 
-@app.route('/feffinp/<cifid>/<absorber>/<edge>/<cluster_size>/<with_h>/<fname>')
-def feffinp(cifid=None, absorber=None, edge='K', cluster_size=7.0,
+@app.route('/feffinp/<cifid>/<absorber>/<site>/<edge>/<cluster_size>/<with_h>/<fname>')
+def feffinp(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
             with_h=False, fname=None):
     connect(session)
     global cifdb, config
@@ -138,7 +166,7 @@ def feffinp(cifid=None, absorber=None, edge='K', cluster_size=7.0,
     if absorber.startswith('D') and not absorber.startswith('Dy'):
         absorber.replace('D', 'H')
 
-
+    print("feffinp:  ", cifid, absorber, site, edge, cluster_size, with_h)
     try:
         stoich = chemparse(absorber)
     except ValueError:
@@ -154,14 +182,15 @@ def feffinp(cifid=None, absorber=None, edge='K', cluster_size=7.0,
         txt = f"could not parse absorber: '{absorber}' for CIF {cifid}  {stoich}"
     else:
         absorber = list(stoich.keys())[0]
-        absorber_site = int(stoich[absorber]) + 1
+
 
         cif = cifdb.get_cif(cifid)
-
+        cluster = cif_cluster(cif.ciftext)
+        print("feffinp:  ", cifid, absorber, site, edge, cluster_size, with_h)
         title = f'*** feff input generated with cif4xas {time.ctime()}'
         feffinp = cif2feffinp(cif.ciftext, absorber, edge=edge,
                     cluster_size=float(cluster_size),
-                    with_h=with_h, absorber_site=absorber_site)
+                    with_h=with_h, absorber_site=int(site))
         txt = title + '\n' + feffinp
 
     return Response(txt, mimetype='text/plain')
