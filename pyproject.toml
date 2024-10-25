@@ -19,9 +19,10 @@ authors = [
      {name = "Matthew Newville", email = "newville@cars.uchicago.edu"}
 ]
 dependencies = [
-    "xraylarch>=0.9.80",
+    "xraydb",
     "sqlachemy>=2",
     "pymatgen",
+    "pyshortcuts",
 ]
 
 license = {file = "LICENSE"}

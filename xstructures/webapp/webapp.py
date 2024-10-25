@@ -7,15 +7,13 @@ from pathlib import Path
 from flask import (Flask, redirect, url_for, render_template,
                    request, session, Response, send_from_directory)
 
-import larch
-from larch.xrd import get_amcsd
-from larch.xrd.cif2feff import cif2feffinp, cif_cluster
+from .. import get_amcsd, cif_cluster, cif2feffinp
 from xraydb import atomic_number
 from xraydb.chemparser import chemparse
 
 top =  Path(__file__).absolute().parent
 
-app = Flask('cif4xas',
+app = Flask('xstructures',
             static_folder=Path(top, 'static'),
             template_folder=Path(top, 'templates'))
 
