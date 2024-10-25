@@ -138,17 +138,17 @@ def index(cifid=None):
             absorber = config['absorber']
             edge = config['edge']
             cifid = config['cifid']
-            if cifid is not None and config['all_sites'] is None:
+            if cifid is not None: #  and config['all_sites'] is None:
                 cif = cifdb.get_cif(cifid)
                 cluster = cif_cluster(cif.ciftext)
                 config['all_sites'] = cluster.all_sites
 
-            self.absorber_sites = cluster.all_sites[catom]
-            print("FEFF -> ", cifid, config['xtal_site'])
-            site = config['all_sites'][absorber][config['xtal_site']]
-            print("FEFF -> ", cifid, config['xtal_site'], site)
-            config['site_index'] = int(site)
-            config['feff_fname'] = f'feff_CIF{cifid}_{absorber}{site}_{edge}.inp'
+                config['absorber_sites'] = cluster.all_sites[absorber]
+                print("FEFF -> ", cifid, config['xtal_site'])
+                site = config['all_sites'][absorber][config['xtal_site']]
+                print("FEFF -> ", cifid, config['xtal_site'], site)
+                config['site_index'] = int(site)
+                config['feff_fname'] = f'feff_CIF{cifid}_{absorber}{site}_{edge}.inp'
 
     print("CIF ALL SITES ", config['cifid'], config['all_sites'])
     return render_template('index.html', **config)
