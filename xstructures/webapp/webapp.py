@@ -59,6 +59,12 @@ def connect(session, cifid=None):
         }
     if cifid is None:
         config['mode'] = 'browse'
+        #config['cifid'] = cifid
+        #config['cifdict'] = {}
+        # config['ciftext'] = ''
+        #config['feff_fname'] = ''
+        #config['fdmnes_fname'] = ''
+
     else:
         if '.' in cifid or '.cif' in cifid or '.txt' in cifid:
             config['mode'] = 'file'
@@ -77,6 +83,9 @@ def connect(session, cifid=None):
     elif config['mode'] == 'file':
         config['ciffile'] = cifid
         config['cifid'] = cifid
+        config['cifdict'] = {}
+        config['feff_fname'] = ''
+        config['fdmnes_fname'] = ''
         with open(Path(app.config["UPLOAD_FOLDER"], cifid).absolute(), 'r') as fh:
             config['ciftext'] = fh.read()
 
