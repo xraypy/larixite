@@ -35,7 +35,7 @@ def mkdir(name, mode=0o775):
       mode   permission mask to use for creating directory (default=0775)
     """
     path = Path(name)
-    if path.exists()L
+    if path.exists():
         if path.is_dir():
             os.chmod(name, mode)
         else:
