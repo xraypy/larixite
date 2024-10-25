@@ -56,6 +56,13 @@ def q2twotheta(q, wavelength, units='degrees'):
         return RAD2DEG*twoth
 
 
+def generate_hkl(hmax=15, kmax=15, lmax=15, positive_only=True):
+    if positive_only:
+        hklall = np.mgrid[0:hmax+1, 0:kmax+1, 0:lmax+1].reshape(3, -1).T
+    else:
+        hklall = np.mgrid[-hmax:hmax+1, -kmax:kmax+1, -lmax:lmax+1].reshape(3, -1).T
+    return np.array([hkl for hkl in hklall if hkl[0]**2 + hkl[1]**2 + hkl[2]**2 > 0])
+
 #
 # def d_from_q(q):
 #     '''
@@ -145,9 +152,3 @@ def q2twotheta(q, wavelength, units='degrees'):
 #         scale = 1e-4
 #     return scale*PLANCK_HC/E
 #
-# def generate_hkl(hmax=15, kmax=15, lmax=15, positive_only=True):
-#     if positive_only:
-#         hklall = np.mgrid[0:hmax+1, 0:kmax+1, 0:lmax+1].reshape(3, -1).T
-#     else:
-#         hklall = np.mgrid[-hmax:hmax+1, -kmax:kmax+1, -lmax:lmax+1].reshape(3, -1).T
-#     return np.array([hkl for hkl in hklall if hkl[0]**2 + hkl[1]**2 + hkl[2]**2 > 0])
