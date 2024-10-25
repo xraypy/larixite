@@ -3,39 +3,38 @@ requires = ["setuptools>=45", "setuptools_scm>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-write_to = "cif4xas/version.py"
+write_to = "xstructures/version.py"
 version_scheme = "post-release"
 
 [tool.setuptools.packages.find]
-include = ["cif4xas"]
+include = ["xstructures"]
 
 [project]
-name = "cif4xas"
+name = "xstructures"
 dynamic = ["version"]
-requires-python = ">= 3.9"
+requires-python = ">= 3.10"
 description = "convert CIF data to inputs for XAS calculations Feff, FDMNES, etc"
-readme = "README.rst"
+readme = "README.md"
 authors = [
-     {name = "Matthew Newville", email = "matt.newville@gmail.com"}
+     {name = "Matthew Newville", email = "newville@cars.uchicago.edu"}
 ]
 dependencies = [
     "xraylarch>=0.9.80",
     "sqlachemy>=2",
-    "flask",
-    "bokeh",
+    "pymatgen",
 ]
 
 license = {file = "LICENSE"}
-keywords = ["X-ray spectroscopy"]
+keywords = ["X-ray spectroscopy", "rystallography"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     ]
 
 [project.urls]
@@ -44,5 +43,6 @@ Documentation = "https://xraypy.github.io/xraylarch/cif4xas"
 Tracker = "https://github.com/xraypy/cif4xas/issues"
 
 [project.optional-dependencies]
+web = ["flask", "bokeh"]
 dev = ["build", "twine"]
-all = ["cif4xas[dev]"]
+all = ["cif4xas[dev,web]"]
