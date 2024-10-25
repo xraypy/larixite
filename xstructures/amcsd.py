@@ -47,10 +47,10 @@ from xraydb import f0, f1_chantler, f2_chantler
 from .amcsd_utils import (make_engine, isAMCSD, put_optarray, get_optarray,
                           PMG_CIF_OPTS, CifParser, SpacegroupAnalyzer, pmg_version)
 
-from .physical_constants impot TAU, ATOM_SYMS
+from .physical_constants import TAU, ATOM_SYMS
 from .utils import isotime, mkdir, version_ge, bytes2str, user_folder
 from .xrd_utils import generate_hkl, hkl2d, q2twotheta, wavelength2energy
-from .cif2feff import cif2feffinp
+from .cif_cluster import cif2feffinp
 
 
 _CIFDB = None
@@ -638,7 +638,7 @@ class CifStructure():
             else:
                 name = f'{absorber:s}_{edge:s}_{min_name:s}_CIF{self.ams_id:06d}'
 
-            ffolder = os.path.join(user_larchdir, 'feff', name)
+            ffolder = os.path.join(user_folder, 'feff', name)
             mkdir(ffolder)
             filename = os.path.join(ffolder, 'feff.inp')
         with open(filename, 'w', encoding=sys.getdefaultencoding()) as fh:
@@ -1316,7 +1316,10 @@ def get_amcsd(download_full=True, timeout=30):
     if _CIFDB is not None:
         return _CIFDB
 
-    dbfull = os.path.join(user_larchdir, AMCSD_FULL)
+    if not os.path.exists(user_folder):
+        mkdir(user_folder)
+
+    dbfull = os.path.join(user_folder, AMCSD_FULL)
     if os.path.exists(dbfull):
         _CIFDB = AMCSD(dbfull)
         return _CIFDB
