@@ -4,8 +4,9 @@ import time
 import numpy as np
 from pathlib import Path
 
-from flask import (Flask, redirect, url_for, render_template,
+from flask import (Flask, redirect, url_for, render_template, flash,
                    request, session, Response, send_from_directory)
+from werkzeug.utils import secure_filename
 
 from .. import get_amcsd, cif_cluster, cif2feffinp
 from xraydb import atomic_number
@@ -17,17 +18,26 @@ app = Flask('xstructures',
             static_folder=Path(top, 'static'),
             template_folder=Path(top, 'templates'))
 
+
+UPLOAD_FOLDER = '/Users/Newville/tmp'
+ALLOWED_EXTENSIONS = {'txt', 'cif'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 2**24
+app.secret_key = 'super secret key'
+
 app.config.from_object(__name__)
 
 cifdb = config = None
 
-def connect(session, force_refresh=False):
+def connect(session, cifid=None):
     global cifdb, config
     if cifdb is None:
         cifdb = get_amcsd()
 
     if config is None:
-        config = {'cifid': None,
+        config = {'cifid': None, 'ciffile': '',
+                   'mode': 'browse',
                    'mineral': '',
                    'elems_in': '',
                    'elems_out': '',
@@ -47,6 +57,35 @@ def connect(session, force_refresh=False):
                    'feff_fname': '',
                    'fdmnes_fname': '',
         }
+    if cifid is None:
+        config['mode'] = 'browse'
+    else:
+        if '.' in cifid or '.cif' in cifid or '.txt' in cifid:
+            config['mode'] = 'file'
+        else:
+            try:
+                cifid = int(cifid)
+                config['mode'] = 'amsid'
+            except ValueError:
+                config['mode'] = 'file'
+
+    if config['mode'] == 'amsid':
+        config['cifffile'] = ''
+        config['cifid'] = int(cifid)
+        cif = cifdb.get_cif(cifid)
+        config['ciftext'] = cif.ciftext.strip()
+    elif config['mode'] == 'file':
+        config['ciffile'] = cifid
+        config['cifid'] = cifid
+        with open(Path(app.config["UPLOAD_FOLDER"], cifid).absolute(), 'r') as fh:
+            config['ciftext'] = fh.read()
+
+
+
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @app.route('/favicon.ico')
@@ -56,31 +95,28 @@ def favicon():
 
 @app.route('/')
 @app.route('/', methods=['GET', 'POST'])
-@app.route('/<cifid>/', methods=['GET', 'POST'])
+@app.route('/<cifid>', methods=['GET', 'POST'])
 def index(cifid=None):
-    connect(session)
     global cifdb, config
-    if cifid is not None:
-        config['cifid'] = cifid
+    connect(session, cifid=cifid)
 
-        cif = cifdb.get_cif(cifid)
-        cluster = cif_cluster(cif.ciftext)
+    print(f"INDEX cifid {cifid}  filename {config['ciffile']}, {len(config['ciftext'])}")
 
-        config['ciftext'] = f"\n{cif.ciftext.strip()}"
+    if len(config['ciftext']) > 3:
+        cluster = cif_cluster(config['ciftext'])
+
         config['atoms'] = []
         config['xtal_sites'] = ['']
         config['xtal_site'] = ''
         config['all_sites'] = cluster.all_sites
 
-        for at in chemparse(cif.formula.replace(' ', '')):
+        for at in chemparse(cluster.formula.replace(' ', '')):
             if at not in ('H', 'D') and at not in config['atoms']:
                 config['atoms'].append(at)
-        # print(' Atoms ', config['atoms'], cluster.all_sites)
+
         if len(config['atoms']) > 0:
             config['xtal_sites'] = list(cluster.all_sites[config['atoms'][0]].keys())
             config['xtal_site'] =  config['xtal_sites'][0]
-        print('> >' , config['xtal_sites'], config['xtal_site'], cluster.unique_sites)
-
 
     if request.method == 'POST':
         if 'search' in request.form.keys():
@@ -135,27 +171,32 @@ def index(cifid=None):
             config['cluster_size'] = request.form.get('cluster_size')
             absorber = config['absorber']
             edge = config['edge']
-            cifid = config['cifid']
-            if cifid is not None: #  and config['all_sites'] is None:
-                cif = cifdb.get_cif(cifid)
-                cluster = cif_cluster(cif.ciftext)
+            ciftext = config['ciftext']
+            if ciftext is not None: #  and config['all_sites'] is None:
+                cluster = cif_cluster(ciftext)
                 config['all_sites'] = cluster.all_sites
 
                 config['absorber_sites'] = cluster.all_sites[absorber]
-                print("FEFF -> ", cifid, config['xtal_site'])
                 site = config['all_sites'][absorber][config['xtal_site']]
-                print("FEFF -> ", cifid, config['xtal_site'], site)
                 config['site_index'] = int(site)
-                config['feff_fname'] = f'feff_CIF{cifid}_{absorber}{site}_{edge}.inp'
 
-    print("CIF ALL SITES ", config['cifid'], config['all_sites'])
+                print("CIF ID ", config['cifid'], ' // ', config['ciffile'], ';')
+                cifid = config['cifid']
+                if config['ciffile'] not in ('', None, 'None'):
+                    cifid = config['ciffile']
+                elif config['cifid'] is not None:
+                    cifid = config['cifid']
+
+                config['feff_fname'] = f'feff_{cifid}_{absorber}{site}_{edge}.inp'
+
+    # print("CIF ALL SITES ", config['cifid'], config['all_sites'])
     return render_template('index.html', **config)
 
 
 @app.route('/feffinp/<cifid>/<absorber>/<site>/<edge>/<cluster_size>/<with_h>/<fname>')
 def feffinp(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
             with_h=False, fname=None):
-    connect(session)
+    connect(session, cifid)
     global cifdb, config
     if absorber.startswith('Wat'):
         absorber.replace('Wat', 'O')
@@ -164,7 +205,7 @@ def feffinp(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
     if absorber.startswith('D') and not absorber.startswith('Dy'):
         absorber.replace('D', 'H')
 
-    print("feffinp:  ", cifid, absorber, site, edge, cluster_size, with_h)
+    # print("feffinp:  ", cifid, absorber, site, edge, cluster_size, with_h)
     try:
         stoich = chemparse(absorber)
     except ValueError:
@@ -181,26 +222,66 @@ def feffinp(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
     else:
         absorber = list(stoich.keys())[0]
 
-
-        cif = cifdb.get_cif(cifid)
-        cluster = cif_cluster(cif.ciftext)
-        print("feffinp:  ", cifid, absorber, site, edge, cluster_size, with_h)
-        title = f'*** feff input generated with cif4xas {time.ctime()}'
-        feffinp = cif2feffinp(cif.ciftext, absorber, edge=edge,
+        # cluster = cif_cluster(config['ciftext'])
+        feffinp = cif2feffinp(config['ciftext'], absorber, edge=edge,
                     cluster_size=float(cluster_size),
                     with_h=with_h, absorber_site=int(site))
-        txt = title + '\n' + feffinp
 
-    return Response(txt, mimetype='text/plain')
-
-@app.route('/showcifuploaded/<fid>')
-def showcifuploaded(fid=None):
-    print('upload ')
+    return Response(feffinp, mimetype='text/plain')
+#
+# @app.route('/ciffile/<name>')
+# def ciffile(name=None):
+#     connect(session)
+#     global cifdb, config
+#
+#     print('use uploadedCIF  ', name)
+#     fname = Path(app.config["UPLOAD_FOLDER"], name).absolute().as_posix()
+#     with open(fname, 'r') as fh:
+#         ciftext = fh.read()
+#
+#     cluster = cif_cluster(ciftext)
+#     config['ciftext'] = f"\n{ciftext.strip()}"
+#     config['atoms'] = []
+#     config['xtal_sites'] = ['']
+#     config['xtal_site'] = ''
+#     config['all_sites'] = cluster.all_sites
+#
+#     for at in chemparse(cif.formula.replace(' ', '')):
+#         if at not in ('H', 'D') and at not in config['atoms']:
+#             config['atoms'].append(at)
+#
+#     if len(config['atoms']) > 0:
+#         config['xtal_sites'] = list(cluster.all_sites[config['atoms'][0]].keys())
+#         config['xtal_site'] =  config['xtal_sites'][0]
 
 
 @app.route('/upload/')
 def upload():
     return render_template('upload.html')
+
+
+
+@app.route('/upload_cif', methods=['GET', 'POST'])
+def upload_cif():
+    connect(session)
+    if request.method == 'POST':
+        print("METHOD POST" , request)
+
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        # If the user does not select a file, the browser submits an
+        # empty file without a filename.
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            return redirect(url_for('index', cifid=filename))
+    return render_template('upload.html')
+
 
 
 @app.route('/about/')
