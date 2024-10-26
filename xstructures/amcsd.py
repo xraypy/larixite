@@ -50,7 +50,6 @@ from .amcsd_utils import (make_engine, isAMCSD, put_optarray, get_optarray,
 from .physical_constants import TAU, ATOM_SYMS
 from .utils import isotime, mkdir, version_ge, bytes2str, user_folder
 from .xrd_utils import generate_hkl, hkl2d, q2twotheta, wavelength2energy
-from .cif_cluster import cif2feffinp
 
 
 _CIFDB = None
@@ -604,46 +603,6 @@ class CifStructure():
                     sites[elem].append([occu, fcoords])
         return sites
 
-
-
-    def get_feffinp(self, absorber, edge=None, cluster_size=8.0, absorber_site=1,
-                    with_h=False, version8=True):
-        pub = self.publication
-        journal = f"{pub.journalname} {pub.volume}, pp. {pub.page_first}-{pub.page_last} ({pub.year:d})"
-        authors = ', '.join(pub.authors)
-        titles = [f'Structure from AMCSD, AMS_ID: {self.ams_id:d}',
-                  f'Mineral Name: {self.mineral.name:s}']
-
-        if not self.formula_title.startswith('<missing'):
-            titles.append(f'Formula Title: {self.formula_title}')
-
-        titles.extend([f'Journal: {journal}', f'Authors: {authors}'])
-        if not self.pub_title.startswith('<missing'):
-            for i, line in enumerate(self.pub_title.split('\n')):
-                titles.append(f'Title{i+1:d}: {line}')
-
-        return cif2feffinp(self.ciftext, absorber, edge=edge,
-                           cluster_size=cluster_size, with_h=with_h,
-                           absorber_site=absorber_site,
-                           extra_titles=titles, version8=version8)
-
-    def save_feffinp(self, absorber, edge=None, cluster_size=8.0, absorber_site=1,
-                      filename=None, version8=True):
-        feff6text = self.get_feffinp(absorber, edge=edge, cluster_size=cluster_size,
-                                      absorber_site=absorber_site, version8=version8)
-        if filename is None:
-            min_name = self.mineral.name.lower()
-            if min_name in ('', '<missing>', 'None'):
-                name = f'{absorber:s}_{edge:s}_CIF{self.ams_id:06d}'
-            else:
-                name = f'{absorber:s}_{edge:s}_{min_name:s}_CIF{self.ams_id:06d}'
-
-            ffolder = os.path.join(user_folder, 'feff', name)
-            mkdir(ffolder)
-            filename = os.path.join(ffolder, 'feff.inp')
-        with open(filename, 'w', encoding=sys.getdefaultencoding()) as fh:
-            fh.write(feff6text)
-        return filename
 
 class AMCSD():
     """
