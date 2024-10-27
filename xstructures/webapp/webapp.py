@@ -8,7 +8,9 @@ from flask import (Flask, redirect, url_for, render_template, flash,
                    request, session, Response, send_from_directory)
 from werkzeug.utils import secure_filename
 
-from .. import get_amcsd, cif_cluster, cif2feffinp
+from xstructures import get_amcsd, cif_cluster, cif2feffinp, read_cif_structure
+from xstructures.utils import get_homedir
+
 from xraydb import atomic_number
 from xraydb.chemparser import chemparse
 
@@ -19,8 +21,8 @@ app = Flask('xstructures',
             template_folder=Path(top, 'templates'))
 
 
-UPLOAD_FOLDER = '/Users/Newville/tmp'
-ALLOWED_EXTENSIONS = {'txt', 'cif'}
+UPLOAD_FOLDER = get_homedir()
+ALLOWED_EXTENSIONS = {'cif', }
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 2**24
@@ -51,6 +53,7 @@ def connect(session, clear=False, cifid=None):
     if cifid is None:
         mode = 'browse'
         config['ciftext'] = ''
+        config['ciffile'] = ''
     else:
         if cifid.endswith('.cif') or cifid.endswith('.txt'):
             mode = 'file'
@@ -65,6 +68,7 @@ def connect(session, clear=False, cifid=None):
         config['cifid'] = int(cifid)
         cif = cifdb.get_cif(cifid)
         config['ciftext'] = cif.ciftext.strip()
+        config['ciffile'] = ''
     elif mode == 'file':
         config['cifid'] = cifid
         config['ciffile'] = cifid
@@ -72,7 +76,7 @@ def connect(session, clear=False, cifid=None):
             path =Path(app.config["UPLOAD_FOLDER"], cifid).absolute()
             if path.exists():
                 with open(path, 'r') as fh:
-                    config['ciftext'] = fh.read()
+                    config['ciftext'] = fh.read().strip()
         except:
             pass
 
@@ -93,7 +97,15 @@ def cifs(cifid=None):
     global cifdb, config
     connect(session, clear=False, cifid=cifid)
 
-    if len(config['ciftext']) > 3:
+    if len(config['ciftext']) > 4:
+        config['ciftext'] = '\n\n' + config['ciftext']
+
+        try:
+            t = read_cif_structure(config['ciftext'])
+        except ValueError:
+            error = f"could not read CIF:   {conf['cifid']}"
+            return render_template('index.html',
+                            error=error)
         cluster = cif_cluster(config['ciftext'])
         config['atoms'] = []
         config['cif_link'] = None
@@ -237,16 +249,28 @@ def upload_cif():
             flash('No file part')
             return redirect(request.url)
         file = request.files['file']
-        # If the user does not select a file, the browser submits an
-        # empty file without a filename.
         if file.filename == '':
             flash('No selected file')
             return redirect(request.url)
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            path = Path(app.config['UPLOAD_FOLDER'], filename).absolute()
+            file.save(path)
+            time.sleep(0.25)
+            error = None
+            if path.exists():
+                with open(path, 'r') as fh:
+                    try:
+                        t = read_cif_structure(fh.read())
+                    except ValueError:
+                        error = f"Pymatgen could not read CIF file: {filename}"
+            else:
+                error = f"could not upload CIF file: {filename}"
+            if error is not None:
+                return render_template('upload.html', error=error)
 
             return redirect(url_for('cifs', cifid=filename))
+
     return render_template('upload.html')
 
 
