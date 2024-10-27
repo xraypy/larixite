@@ -30,63 +30,51 @@ app.config.from_object(__name__)
 
 cifdb = config = None
 
-def connect(session, cifid=None):
+def connect(session, clear=False, cifid=None):
     global cifdb, config
     if cifdb is None:
         cifdb = get_amcsd()
 
-    if config is None:
-        config = {'cifid': None, 'ciffile': '',
-                   'mode': 'browse',
-                   'mineral': '',
-                   'elems_in': '',
-                   'elems_out': '',
-                   'strict': True,
-                   'cifdict': {},
-                   'atoms': [],
-                   'with_h': False,
-                   'edges': ['K', 'L3', 'L2', 'L1', 'M5', 'M4', 'M3'],
-                   'cluster_size': 7.0,
-                   'cif_cluster' :None,
-                   'ciftext' : '',
-                   'all_sites': {},
-                   'absorber': '',
-                   'edge': '',
-                   'cif_link': None,
-                   'feff_links': {},
-                   'fdmnes_fname': '',
-        }
-    if cifid is None:
-        config['mode'] = 'browse'
-        config['cif_link'] = None
-        config['feff_links'] = {}
-        config['fdmnes_fname'] = ''
+    if config is None or clear:
+        config = {'cifdict': {},
+                  'with_h': False,
+                  'edges': ['K', 'L3', 'L2', 'L1', 'M5', 'M4', 'M3'],
+                  'cluster_size': 7.0,
+                  'mineral': '',
+                  'elems_in': '',
+                  'elems_out': '',
+                  'strict': True,
+                  'absorber': '',
+                  'edge': '',
+                  'ciftext': ''}
 
+    if cifid is None:
+        mode = 'browse'
+        config['ciftext'] = ''
     else:
-        if '.' in cifid or '.cif' in cifid or '.txt' in cifid:
-            config['mode'] = 'file'
+        if cifid.endswith('.cif') or cifid.endswith('.txt'):
+            mode = 'file'
         else:
             try:
                 cifid = int(cifid)
-                config['mode'] = 'amsid'
+                mode = 'amsid'
             except ValueError:
-                config['mode'] = 'file'
+                mode = 'file'
 
-    if config['mode'] == 'amsid':
-        config['cifffile'] = ''
+    if mode == 'amsid':
         config['cifid'] = int(cifid)
         cif = cifdb.get_cif(cifid)
         config['ciftext'] = cif.ciftext.strip()
-    elif config['mode'] == 'file':
-        config['ciffile'] = cifid
+    elif mode == 'file':
         config['cifid'] = cifid
-        config['cif_link'] = None
-        config['feff_links'] = {}
-        config['cifdict'] = {}
-        config['fdmnes_fname'] = ''
-        with open(Path(app.config["UPLOAD_FOLDER"], cifid).absolute(), 'r') as fh:
-            config['ciftext'] = fh.read()
-
+        config['ciffile'] = cifid
+        try:
+            path =Path(app.config["UPLOAD_FOLDER"], cifid).absolute()
+            if path.exists():
+                with open(path, 'r') as fh:
+                    config['ciftext'] = fh.read()
+        except:
+            pass
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -98,18 +86,15 @@ def favicon():
     return send_from_directory(app.static_folder, 'ixas_logo.ico',
                                mimetype='image/vnd.microsoft.icon')
 
-@app.route('/')
-@app.route('/', methods=['GET', 'POST'])
-@app.route('/<cifid>', methods=['GET', 'POST'])
-def index(cifid=None):
+@app.route('/cifs')
+@app.route('/cifs', methods=['GET', 'POST'])
+@app.route('/cifs/<cifid>', methods=['GET', 'POST'])
+def cifs(cifid=None):
     global cifdb, config
-    connect(session, cifid=cifid)
-
-    # print(f"INDEX cifid {cifid}  filename {config['ciffile']}, {len(config['ciftext'])}")
+    connect(session, clear=False, cifid=cifid)
 
     if len(config['ciftext']) > 3:
         cluster = cif_cluster(config['ciftext'])
-
         config['atoms'] = []
         config['cif_link'] = None
         config['feff_links'] = {}
@@ -155,7 +140,7 @@ def index(cifid=None):
                         continue
                     cifdict[cid] = (label, cite)
                 except:
-                    print("could not add cif ", cif)
+                    pass
             config['cifdict'] = cifdict
             config['cifid'] = cifid  = None
             config['ciftext'] = ''
@@ -189,10 +174,17 @@ def index(cifid=None):
     return render_template('index.html', **config)
 
 
+@app.route('/')
+def index():
+    global cifdb, config
+    connect(session, clear=True)
+    return render_template('index.html', **config)
+
+
 @app.route('/feffinp/<cifid>/<absorber>/<site>/<edge>/<cluster_size>/<with_h>/<fname>')
 def feffinp(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
             with_h=False, fname=None):
-    connect(session, cifid)
+    connect(session, cifid=cifid)
     global cifdb, config
     if absorber.startswith('Wat'):
         absorber.replace('Wat', 'O')
@@ -230,8 +222,8 @@ def feffinp(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
 
 @app.route('/ciffile/<cifid>/<fname>')
 def ciffile(cifid=None, fname='amcsd.cif'):
-    connect(session, cifid)
     global cifdb, config
+    connect(session, cifid=cifid)
     return Response(config['ciftext'], mimetype='text/plain')
 
 @app.route('/upload/')
@@ -240,10 +232,7 @@ def upload():
 
 @app.route('/upload_cif', methods=['GET', 'POST'])
 def upload_cif():
-    connect(session)
     if request.method == 'POST':
-        # print("METHOD POST" , request)
-
         if 'file' not in request.files:
             flash('No file part')
             return redirect(request.url)
@@ -256,7 +245,8 @@ def upload_cif():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            return redirect(url_for('index', cifid=filename))
+
+            return redirect(url_for('cifs', cifid=filename))
     return render_template('upload.html')
 
 
