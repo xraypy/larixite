@@ -11,25 +11,37 @@
   {% endif %}
 
  <table cellpadding=2 border=0>
-   <tr> <td  style="width: 350px;" >
+   <tr> <td  style="width: 300px;" >
+
+       {% if  cifdict  %}
        <div class=subtitle> Select a Structure File  </div>
 
-    <table cellpadding=2 border=0>
+       <table cellpadding=2 border=0>
        {% for cifid, labels in cifdict.items() %}
-           <tr class={{ loop.cycle('odd', 'even') }}>
-             <td><a href="{{url_for('index', cifid=cifid)}}">{{labels[0]}}
+       <tr class={{ loop.cycle('odd', 'even') }}>
+             <td><a href="{{url_for('cifs', cifid=cifid)}}">{{labels[0]}}
                  <br>   &nbsp;  &nbsp; {{ labels[1] }} </a>
              </td>
            </tr>
-       {% endfor %}
-      </table>
+           {% endfor %}
+    </table>
+
+       {% else %}
+       <div class=subtitle>
+
+         <a href="{{url_for('upload')}}"> Upload a CIF file </a>
+       </div>
+
+
+     {% endif %}
+
      </td>
 
      <td>
-       <div class=subtitle> Search the American Mineralogis Crystal
-         Structure Database </div>
+       <div class=subtitle> Search the American Mineralogist Crystal
+         Structures </div>
 
-  <form action="{{url_for('index')}}" method="post">
+  <form action="{{url_for('cifs')}}" method="post">
 
     <table cellpadding=2 border=0>
       <tr>
@@ -54,7 +66,8 @@
         <td>  <input type="submit" name="search" value="Search for CIFs"></td>
         <td colspan=2>  <input type="checkbox" id="strict" name="strict"
                                {% if strict  %} checked="checked" {% endif %}       >
-         <label for="strict">Include only the elements listed</label> </td>
+          <label for="strict">Include only the elements listed</label>
+        </td>
       </tr>
     </table>
   </form>
@@ -62,9 +75,10 @@
 
   {% if cifid %}
 
-  Generate XAS Input File
+       <div class=subtitle>  Generate XAS Input File     </div>
 
-    <form action="{{url_for('index')}}" method="post">
+
+    <form action="{{url_for('cifs', cifid=cifid)}}" method="post">
 
     <table cellpadding=2 border=0>
       <tr>
