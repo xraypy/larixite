@@ -1,0 +1,45 @@
+* FEFF8 input file generated {timestamp}
+*   xstructures {version}
+*   pymatgetn {pymatgen_version}
+
+{titles}
+
+{comments}
+
+*  <central> <edge> edge energy = <eedge> eV
+EDGE      {edge}
+S02      1.0
+
+*         pot    xsph  fms   paths genfmt ff2chi
+CONTROL   1      1     1     1     1      1
+PRINT     1      0     0     0     0      0
+
+*** ixc=0 means to use Hedin-Lundqvist
+*         ixc  [ Vr  Vi ]
+EXCHANGE  0
+
+RPATH     {radius}
+EXAFS     20
+NLEG      6
+EXAFS     20.0
+
+
+*  POLARIZATION  0 0 0
+
+*         r_scf  [ l_scf   n_scf   ca ]
+*SCF       5.0
+
+*         emin  emax   eimag
+*LDOS      -30   20     0.1
+
+
+POTENTIALS
+*  ipot    z    tag
+{potentials}
+
+ATOMS
+*    x         y         z     ipot tag distance   site_info
+{atoms}
+
+
+* END
