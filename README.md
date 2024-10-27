@@ -40,8 +40,8 @@ To run the web app locally,  install the extra we dependencies with
     > pip install ".[web]"
 
 
-and run the script "xstructures_app.py" with
+and run the script "run_local.py" with
 
-      > python xrsttures_app.py
+      > python run_local.py
 
 will launch a local web server with the app running at http://127.0.0.1:11564/
