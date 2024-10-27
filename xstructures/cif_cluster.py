@@ -37,9 +37,9 @@ def read_cif_structure(ciftext):
         ciftext = open(ciftext, 'r').read()
     try:
         cifstructs = CifParser(StringIO(ciftext), **PMG_CIF_OPTS)
-        parse_ok = True
+
     except:
-        parse_ok = False
+        raise ValueError('could not parse text of CIF')
 
     try:
         cstruct = cifstructs.parse_structures()[0]
