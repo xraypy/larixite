@@ -88,7 +88,6 @@ def connect(session, cifid=None):
             config['ciftext'] = fh.read()
 
 
-
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -173,7 +172,7 @@ def index(cifid=None):
             config['cluster_size'] = cluster_size = request.form.get('cluster_size')
 
             if config['ciftext'] is not None:
-                cluster = cif_cluster(config['ciftext'])
+                cluster = cif_cluster(config['ciftext'], absorber=absorber)
                 config['all_sites'] = cluster.all_sites
                 cifid = config['cifid']
                 if config['ciffile'] not in ('', None, 'None'):
@@ -234,40 +233,10 @@ def ciffile(cifid=None, fname='amcsd.cif'):
     connect(session, cifid)
     global cifdb, config
     return Response(config['ciftext'], mimetype='text/plain')
-#
-#
-
-# @app.route('/ciffile/<name>')
-# def ciffile(name=None):
-#     connect(session)
-#     global cifdb, config
-#
-#     print('use uploadedCIF  ', name)
-#     fname = Path(app.config["UPLOAD_FOLDER"], name).absolute().as_posix()
-#     with open(fname, 'r') as fh:
-#         ciftext = fh.read()
-#
-#     cluster = cif_cluster(ciftext)
-#     config['ciftext'] = f"\n{ciftext.strip()}"
-#     config['atoms'] = []
-#     config['xtal_sites'] = ['']
-#     config['xtal_site'] = ''
-#     config['all_sites'] = cluster.all_sites
-#
-#     for at in chemparse(cif.formula.replace(' ', '')):
-#         if at not in ('H', 'D') and at not in config['atoms']:
-#             config['atoms'].append(at)
-#
-#     if len(config['atoms']) > 0:
-#         config['xtal_sites'] = list(cluster.all_sites[config['atoms'][0]].keys())
-#         config['xtal_site'] =  config['xtal_sites'][0]
-
 
 @app.route('/upload/')
 def upload():
     return render_template('upload.html')
-
-
 
 @app.route('/upload_cif', methods=['GET', 'POST'])
 def upload_cif():
