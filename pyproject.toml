@@ -12,7 +12,7 @@ include = ["xstructures"]
 [project]
 name = "xstructures"
 dynamic = ["version"]
-requires-python = ">= 3.10"
+requires-python = ">= 3.9"
 description = "convert CIF data to inputs for XAS calculations Feff, FDMNES, etc"
 readme = "README.md"
 authors = [
