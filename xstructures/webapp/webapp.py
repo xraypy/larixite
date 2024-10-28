@@ -165,7 +165,7 @@ def cifs(cifid=None):
         elif 'feff' in request.form.keys():
             config['absorber'] = absorber = request.form.get('absorbing_atom')
             config['edge'] = edge =request.form.get('edge')
-            config['with_h'] = with_h = 1 if request.form.get('with_h') else 0
+            config['with_h'] = with_h = True if request.form.get('with_h') else False
             config['cluster_size'] = cluster_size = request.form.get('cluster_size')
 
             if config['ciftext'] is not None:
@@ -225,6 +225,8 @@ def feffinp(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
             xcifid = None
 
         absorber = list(stoich.keys())[0]
+        if with_h == '0':
+            with_h = False
         feffinp = cif2feffinp(config['ciftext'], absorber, edge=edge,
                     cluster_size=float(cluster_size), cifid=xcifid,
                     with_h=with_h, absorber_site=int(site))
