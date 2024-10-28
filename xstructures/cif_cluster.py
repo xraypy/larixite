@@ -372,7 +372,8 @@ def cif2feffinp(ciftext, absorber, template=None, edge=None, cluster_size=8.0,
         if acount > 500:
             break
         sym = (sym + ' ')[:2]
-        atoms.append(f'  {x:+.5f}  {y:+.5f}  {z:+.5f} {ipot:2d}   {sym:>3s} {dist:.5f}  * {tag:s}')
+        xyzi = f'  {x:+.5f}  {y:+.5f}  {z:+.5f} {ipot:2d}'.replace(' +', '  ')
+        atoms.append(f'{xyzi}  {sym:>3s}  {dist:.5f}  * {tag:s}')
 
 
     # now ready to write with template
