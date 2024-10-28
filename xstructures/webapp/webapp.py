@@ -39,7 +39,7 @@ def connect(session, clear=False, cifid=None):
 
     if config is None or clear:
         config = {'cifdict': {},
-                  'with_h': False,
+                  'with_h': 0,
                   'edges': ['K', 'L3', 'L2', 'L1', 'M5', 'M4', 'M3'],
                   'cluster_size': 7.0,
                   'mineral': '',
@@ -165,7 +165,8 @@ def cifs(cifid=None):
         elif 'feff' in request.form.keys():
             config['absorber'] = absorber = request.form.get('absorbing_atom')
             config['edge'] = edge =request.form.get('edge')
-            config['with_h'] = with_h = True if request.form.get('with_h') else False
+            with_h = request.form.get('with_h') in ('1', 'on', 'True', 1, True)
+            config['with_h'] = with_h = int(with_h)
             config['cluster_size'] = cluster_size = request.form.get('cluster_size')
 
             if config['ciftext'] is not None:
@@ -225,8 +226,10 @@ def feffinp(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
             xcifid = None
 
         absorber = list(stoich.keys())[0]
-        if with_h == '0':
-            with_h = False
+        if with_h in  ('1', 'on', 'True', 1, True):
+            with_h = 1
+        else:
+            with_h = 0
         feffinp = cif2feffinp(config['ciftext'], absorber, edge=edge,
                     cluster_size=float(cluster_size), cifid=xcifid,
                     with_h=with_h, absorber_site=int(site))
