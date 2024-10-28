@@ -86,7 +86,7 @@ def decode_farray(dat):
     """decodes a string encoded by encode_farray()
     returns list of string
     """
-    arr = np.fromstring(b64decode(dat), dtype=np.int32)/farray_scale
+    arr = np.frombuffer(b64decode(dat), dtype=np.int32)/farray_scale
     out = []
     for a in arr:
         if (abs(a-2.0) < 1.e-5):
