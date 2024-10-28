@@ -1,6 +1,6 @@
 # Xstructures
 
-Crystal structures and clusters of atoms.
+Crystal structures and clusters of atoms for X-ray absorption spectroscopy.
 
 The main purpose of xstructures is to provide a Python package for using
 crystallographic data or calculated clusters of atoms to generate inputs
@@ -8,14 +8,14 @@ for  X-ray absorption spectroscopy and other scientific disciplines that use
 non-crystalline clusters of atoms.
 
 
-This project includes
+This project includes:
 
-1. an sqlite3 database of crystal structure from the American Mineralogical
-   Crystal Structure Database (AMCSD)
+1. an sqlite3 database of structures from the [American Mineralogical
+   Crystal Structure Database](https://rruff.geo.arizona.edu/AMS/amcsd.php) (AMCSD)
 2. Python code to convert structures from the AMCSD database, other CIF files,
-    or XYZ coordinates into atomic clusters for XAS calculations with FEFF,
-    FDMNES, and other XAS calculation tools.
-3. A basic web application to guide those conversions.
+   or XYZ coordinates into atomic clusters for XAS calculations with FEFF,
+   FDMNES, and other XAS calculation tools.
+3. A basic web application to guide those conversions. See the prototype [Xstructures Web App](https://millenia.cars.aps.anl.gov/xstructures).
 
 
 ## install
