@@ -205,12 +205,10 @@ class CIF_Cluster():
 
         self.molecule = Molecule(self.symbols, self.coords)
 
-##
 
 def cif_cluster(ciftext=None, filename=None, absorber=None):
     "return list of sites for the structure"
     return CIF_Cluster(ciftext=ciftext, filename=filename, absorber=absorber)
-
 
 
 def cif_extra_titles(cifid):
@@ -221,8 +219,9 @@ def cif_extra_titles(cifid):
         return []
 
     # titles from CIF
-    out = [f'CIF Source: Am Min Crystal Structure Database ID {cif.ams_id}',
-           f'Mineral Name: {cif.mineral.name.lower()}']
+    out = [f'Mineral Name: {cif.mineral.name.lower()}',
+           f'CIF Source: AmMin Crystal Structure DB, id={cif.ams_id}']
+
     pub = getattr(cif, 'publication', None)
     if pub is not None:
         authors = ', '.join(pub.authors)
@@ -230,13 +229,15 @@ def cif_extra_titles(cifid):
         out.append(f'Publication: {ptext}')
         out.append(f'Authors: {authors}')
 
-    cell = [f'a={fcompact(cif.a)}', f'b={fcompact(cif.b)}', f'c={fcompact(cif.c)}',
-            f'alpha={fcompact(cif.alpha)}', f'beta={fcompact(cif.beta)}',
-            f'gamma={fcompact(cif.gamma)}']
-    out.append(f'Cell Parameters (A, degrees): {", ".join(cell)}')
-    out.append(f'Cell Volume (A^3): {fcompact(cif.cell_volume)}')
+    celld = [f'a={fcompact(cif.a)}', f'b={fcompact(cif.b)}', f'c={fcompact(cif.c)}']
+    cella = [f'alpha={fcompact(cif.alpha)}', f'beta={fcompact(cif.beta)}',
+             f'gamma={fcompact(cif.gamma)}']
+    out.append(f'Cell Parameter lengths (Ang): {", ".join(celld)}')
+    out.append(f'Cell Parameter angles  (deg): {", ".join(cella)}')
+    out.append(f'Cell Volume (Ang^3): {fcompact(cif.cell_volume)}')
     out.append(f'Crystal Density (gr/cm^3): {fcompact(cif.crystal_density)}')
-    out.append(f'Compound: {cif.compound}')
+    if cif.compound != '<missing>':
+        out.append(f'Compound: {cif.compound}')
     return out
 
 
@@ -325,14 +326,14 @@ def cif2feffinp(ciftext, absorber, template=None, edge=None, cluster_size=8.0,
     comments = ['*', '* crystallographic sites:',
                 '*    To change the absorber site, re-run using `absorber_site`',
                 '*    with the corresponding site index (counting from 1)',
-                '* site    X        Y        Z      Wyckoff  species']
+                '* site    X       Y       Z     Wyckoff  species']
 
     for i, dat in enumerate(cluster.unique_sites):
         site, n, wsym = dat
         fc = site.frac_coords
         species_string = site.species_string.strip()
         marker = '  <- absorber' if  ((i+1) == absorber_site) else ''
-        s1 = f'{i+1:3d}   {fc[0]:.6f} {fc[1]:.6f} {fc[2]:.6f}'
+        s1 = f'{i+1:3d}   {fc[0]:.5f} {fc[1]:.5f} {fc[2]:.5f}'
         s2 = f'{wsym:>5s}   {species_string:s} {marker:s}'
         comments.append(f'* {s1}  {s2}')
     comments.append('*')
