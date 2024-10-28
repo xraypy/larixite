@@ -242,7 +242,7 @@ def cif_extra_titles(cifid):
 
 
 def cif2feffinp(ciftext, absorber, template=None, edge=None, cluster_size=8.0,
-                absorber_site=1, extra_titles=None, with_h=False,
+                absorber_site=None, extra_titles=None, with_h=False,
                 version8=True, rng_seed=None, cifid=None):
 
     """convert CIF text to Feff8 or Feff6l input file
@@ -254,7 +254,7 @@ def cif2feffinp(ciftext, absorber, template=None, edge=None, cluster_size=8.0,
                                 (see Note 1)
       edge (string or None):    edge for calculation (see Note 2)     [None]
       cluster_size (float):     size of cluster, in Angstroms         [8.0]
-      absorber_site (int):      index of site for absorber (see Note 3) [1]
+      absorber_site (None or int):  index of site for absorber (see Note 3) [None]
       extra_titles (list of str or None): extra title lines to include [None]
       with_h (bool):            whether to include H atoms [False]
       version8 (bool):          whether to write Feff8l input (see Note 5)[True]
@@ -266,7 +266,9 @@ def cif2feffinp(ciftext, absorber, template=None, edge=None, cluster_size=8.0,
     Notes
     -----
       1. absorber is the atomic symbol or number of the absorbing element, and
-         must be an element in the CIF structure.
+         must be an element in the CIF structure. If absorber_site is None (default),
+         the first site for that element will be used, as found from cluster.atom_sites.
+
       2. If edge is a string, it must be one of 'K', 'L', 'M', or 'N' edges (note
          Feff6 supports only 'K', 'L3', 'L2', and 'L1' edges). If edge is None,
          it will be assigned to be 'K' for absorbers with Z < 58 (Ce, with an
@@ -286,6 +288,10 @@ def cif2feffinp(ciftext, absorber, template=None, edge=None, cluster_size=8.0,
         template = open(Path(TEMPLATE_FOLDER, 'feff_exafs.tmpl'), 'r').read()
 
     cluster = CIF_Cluster(ciftext=ciftext, absorber=absorber)
+
+    if absorber_site is None:
+        absorber_site = cluster.atom_sites[absorber][0]
+
     cluster.build_cluster(absorber_site=absorber_site, cluster_size=cluster_size)
 
     mol = cluster.molecule
