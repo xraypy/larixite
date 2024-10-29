@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Larixite: Structures for X-ray Absorption Spectroscopy, American Mineralogist Crystal Structure Database</title>
+    <link rel=stylesheet type=text/css  href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+
+<div class=topbar>
+  <table cellpadding=1 width=100%>
+    <tr><td width=65% padding=5 align=left>
+      <a href="{{url_for('index')}}"> Larixite: Crystal
+  Structures for X-ray Absorption Spectrosscopy</a>
+    </td>
+    <td wodth=35% align=right>
+       <a href="{{url_for('about')}}"> About </a>
+      </td>
+  </table>
+</div>
+
+{% block body %}
+{% endblock %}

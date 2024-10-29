@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+
+{% block body %}
+<div class=body>
+    {% if error %}
+    <p>{{error}}</p>
+    {% endif %}
+
+    <h3> Uploading CIF Files </h3>
+
+    Larixite allows you to upload CIF files.  These must be plain text
+    files, smaller than 4 Mb, and have a file name that ends with ".cif".
+
+    <p>
+
+      Larixite  tries to be able to use any CIF file,  but CIF is a complicated
+      description of crystallographic information, and some CIF files from
+      external sources may not be usable by Larixite.   If you run into
+      trouble, let us know, at
+      <a href="https://github.com/xraypy/larixite">larixite Github
+      page</a> or by emailing the developers.
+
+    <p>
+
+
+    <h3> Credits </h3>
+
+    Larixite was written by Matthew Newville, The University of Chicago and
+    Mauro Rovezzi, University Grenoble Alpes and CNRS, using code from Margaret
+    Koker, Lawrence University, Ryuichi Shimogawa, Stony Brook University,
+    Beatriz G. Foschiani, University Grenoble Alpes, Jade Chongsathapornpong,
+    CNRS, and Marius Retegan, European Synchrotron Radiation Facility.
+
+    <p>
+      The database of structures comes from data from
+      <a href="https://rruff.geo.arizona.edu/AMS/amcsd.php">
+        American Mineralogist Crystal Structure Database</a>
+      that have been compiled into an SQLite3 database.
+
+    <p> The code used here was originally part of
+      <a href="https://github.com/xraypy/xraylarch">xraylarch</a>, but has now
+      been migrated to its own project at
+      <a href="https://github.com/xraypy/larixite">larixite</a> which can
+      be used programmatically from Python.
+
+
+    <p>
+      The code to work with crystal structures and CIF files
+      uses <a href="https://pymatgen.org/">PyMatGen</a> from the
+      <a href="https://next-gen.materialsproject.org/"> The Materials Project</a>
+
+   <p>
+</div>
+{% endblock %}

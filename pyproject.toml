@@ -3,21 +3,23 @@ requires = ["setuptools>=45", "setuptools_scm>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-write_to = "xstructures/version.py"
+write_to = "larixite/version.py"
 version_scheme = "post-release"
 
 [tool.setuptools.packages.find]
-include = ["xstructures"]
+include = ["larixite"]
 
 [project]
-name = "xstructures"
+name = "larixite"
 dynamic = ["version"]
 requires-python = ">= 3.9"
 description = "convert CIF data to inputs for XAS calculations Feff, FDMNES, etc"
 readme = "README.md"
 authors = [
      {name = "Matthew Newville", email = "newville@cars.uchicago.edu"}
+     {name = "Mauro Rovezzi", email = "mauro.rovezzi@esrf.fr"}
 ]
+
 dependencies = [
     "xraydb",
     "sqlalchemy>=2",
@@ -26,7 +28,7 @@ dependencies = [
 ]
 
 license = {file = "LICENSE"}
-keywords = ["X-ray spectroscopy", "rystallography"]
+keywords = ["X-ray spectroscopy", "Crystallography"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -39,11 +41,11 @@ classifiers = [
     ]
 
 [project.urls]
-Homepage = " https://github.com/xraypy/cif4xas"
-Documentation = "https://xraypy.github.io/xraylarch/cif4xas"
-Tracker = "https://github.com/xraypy/cif4xas/issues"
+Homepage = " https://github.com/xraypy/larixite"
+Documentation = "https://xraypy.github.io/larixite"
+Tracker = "https://github.com/xraypy/larixite/issues"
 
 [project.optional-dependencies]
-web = ["flask", "bokeh"]
+web = ["flask"]
 dev = ["build", "twine"]
-all = ["cif4xas[dev,web]"]
+all = ["larixite[dev,web]"]
