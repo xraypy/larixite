@@ -384,7 +384,10 @@ def cif2feffinp(ciftext, absorber, template=None, edge=None, cluster_size=8.0,
 
 
     # now ready to write with template
-    conf = {'version': x_version, 'timestamp': isotime(),
+    vers = x_version[:]
+    if '.post' in vers:
+        vers = vers.split('.post')[0]
+    conf = {'version': vers, 'timestamp': isotime(),
             'pymatgen_version': pymatgen_version, 'edge': edge,
             'radius': f'{cluster_size:.2f}' }
 
