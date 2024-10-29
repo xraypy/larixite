@@ -16,7 +16,7 @@ requires-python = ">= 3.9"
 description = "convert CIF data to inputs for XAS calculations Feff, FDMNES, etc"
 readme = "README.md"
 authors = [
-     {name = "Matthew Newville", email = "newville@cars.uchicago.edu"}
+     {name = "Matthew Newville", email = "newville@cars.uchicago.edu"},
      {name = "Mauro Rovezzi", email = "mauro.rovezzi@esrf.fr"}
 ]
 
