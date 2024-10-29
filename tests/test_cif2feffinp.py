@@ -1,6 +1,6 @@
 import pytest
 
-from xstructures import get_amcsd, cif2feffinp
+from larixite import get_amcsd, cif2feffinp
 
 def test_cif2feff_v1():
 

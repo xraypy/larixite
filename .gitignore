@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-xstructures/version.py
+larixite/version.py
 
 *.so
 
