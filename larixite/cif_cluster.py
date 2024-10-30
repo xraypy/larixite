@@ -364,6 +364,10 @@ def cif2feffinp(ciftext, absorber, template=None, edge=None, cluster_size=8.0,
         dist = mol.get_distance(0, i+1)
         at_lines.append((dist, site.x, site.y, site.z, ipot, sym, cluster.tags[i+1]))
 
+    if len(ipot_map) > 10:
+        comments.append('*** WARNING: Feff 8l is limited to 11 unique potentials***')
+        comments.append('*** WARNING: This input file may need editing')
+
     # ipots
     ipot, z = 0, absorber_z
     ipot_lines = [f'  {ipot:4d}  {z:>4d}   {absorber:>3s}']
