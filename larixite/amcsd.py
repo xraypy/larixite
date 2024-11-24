@@ -485,14 +485,20 @@ class CifStructure():
         degen = degen[qsort]
 
         energy = wavelength2energy(wavelength, E_units='eV')
+        twoth = q2twotheta(qhkls, wavelength, units='deg')
+
+        # check for valid angle
+        valid = np.where(~np.isnan(twoth))[0]
+        twoth = twoth[valid]
+        qhkls = qhkls[valid]
+        hkls  = hkls[valid]
+        degen = degen[valid]
 
         f2hkl = self.calculate_f2(hkls, qhkls=qhkls, wavelength=wavelength)
 
         # lorentz and polarization correction
-        twoth = q2twotheta(qhkls, wavelength, units='deg')
         arad = (TAU/360)*twoth
         corr = (1+np.cos(arad)**2)/(np.sin(arad/2)**2*np.cos(arad/2))
-
         intensity = f2hkl * degen * corr
 
         return StructureFactor(q=qhkls, intensity=intensity, hkl=hkls, d=dhkls,
