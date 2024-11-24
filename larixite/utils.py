@@ -8,18 +8,10 @@ import time
 from pathlib import Path
 from packaging import version as pkg_version
 
-from pyshortcuts import get_homedir
+from pyshortcuts import get_homedir, bytes2str, isotime
 
 home_dir = get_homedir()
 user_folder = Path(home_dir, '.larch').absolute().as_posix()
-
-def bytes2str(s):
-    if isinstance(s, str):
-        return s
-    elif isinstance(s, bytes):
-        return s.decode(sys.stdout.encoding)
-    return str(s, sys.stdout.encoding)
-
 
 def strict_ascii(s, replacement='_'):
     """for string to be truly ASCII with all characters below 128"""
@@ -44,12 +36,15 @@ def mkdir(name, mode=0o775):
         os.makedirs(name, mode=mode)
 
 
-def isotime(t=None):
-    if t is None:
-        t = time.time()
-    sout = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t))
-    return sout
-
 def version_ge(v1, v2):
     "returns whether version string 1 >= version_string2"
     return pkg_version.parse(v1) >= pkg_version.parse(v2)
+
+def fcompact(val):
+    """format a float value, removing extra trailing zeros"""
+    val = f'{val:.6f}'
+    while val.endswith('0'):
+        val = val[:-1]
+    if val.endswith('.'):
+        val = val + '0'
+    return val

@@ -7,8 +7,7 @@ from pymatgen.core import __version__ as pymatgen_version
 
 from xraydb import atomic_symbol, atomic_number, xray_edge
 
-from .utils import strict_ascii, isotime
-from .gformat import  gformat, fcompact
+from .utils import strict_ascii, fcompact, isotime
 from .amcsd_utils import PMG_CIF_OPTS, CifParser, Molecule, SpacegroupAnalyzer
 from .amcsd import get_cif
 
