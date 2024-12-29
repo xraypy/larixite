@@ -66,15 +66,8 @@ class CIF_Cluster():
         self.with_h = with_h
         self.cluster_size = cluster_size
         self.struct = None
-
-        if isinstance(self.absorber, int):
-            self.absorber   = atomic_symbol(self.absorber)
-        if isinstance(self.absorber, str):
-            self.absorber_z   = atomic_number(self.absorber)
-
         if ciftext is None and filename is not None:
             self.ciftext = open(filename, 'r').read()
-
         if self.ciftext is not None:
             self.parse_ciftext(self.ciftext)
 
