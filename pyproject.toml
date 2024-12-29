@@ -23,7 +23,7 @@ authors = [
 dependencies = [
     "xraydb",
     "sqlalchemy>=2",
-    "pymatgen",
+    "pymatgen>=2024.9.10",
     "pyshortcuts",
 ]
 
