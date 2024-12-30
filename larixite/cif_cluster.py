@@ -3,7 +3,7 @@ from pathlib import Path
 from random import Random
 from io import StringIO
 import numpy as np
-from pymatgen.core import __version__ as pymatgen_version
+from pymatgen.core import __version__ as pymatgen_version, Structure, Site
 
 from xraydb import atomic_symbol, atomic_number, xray_edge
 
@@ -18,7 +18,7 @@ rng = Random()
 TEMPLATE_FOLDER = Path(Path(__file__).parent, 'templates')
 
 
-def read_cif_structure(ciftext):
+def read_cif_structure(ciftext: str) -> Structure:
     """read CIF text, return CIF Structure
 
     Arguments
@@ -37,19 +37,32 @@ def read_cif_structure(ciftext):
     try:
         cifstructs = CifParser(StringIO(ciftext), **PMG_CIF_OPTS)
 
-    except:
+    except Exception:
         raise ValueError('could not parse text of CIF')
 
     try:
         cstruct = cifstructs.parse_structures()[0]
-    except:
+    except Exception:
         raise ValueError('could not get structure from text of CIF')
     return cstruct
 
 
-def site_label(site):
+def site_label(site: Site) -> str:
+    """
+    return a string label for a pymatgen Site object, 
+    using the species string and fractional coordinates
+    
+    Parameters
+    ----------
+    site : pymatgen Site object
+    
+    Returns
+    -------
+    str
+    """
     coords = ','.join([fcompact(s) for s in site.frac_coords])
     return f'{site.species_string}[{coords}]'
+
 
 class CIF_Cluster():
     """
