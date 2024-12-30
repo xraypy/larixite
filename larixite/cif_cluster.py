@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from random import Random
 from io import StringIO
+from typing import Union
 import numpy as np
 from pymatgen.core import __version__ as pymatgen_version, Structure, Site
 
@@ -85,6 +86,20 @@ class CIF_Cluster():
             self.parse_ciftext(self.ciftext)
 
     def set_absorber(self, absorber=None):
+        """
+        set the absorbing atom element
+        
+        Parameters
+        ----------
+        absorber : None, int, or str
+            if None, no change will be made.
+            if int, the atomic number of the absorbing element
+            if str, the atomic symbol of the absorbing element
+        
+        Notes
+        -----
+        The absorber atom is assumed to be in the CIF structure.
+        """
         self.absorber_z = None
         self.absorber = absorber
         if isinstance(self.absorber, int):
@@ -92,7 +107,13 @@ class CIF_Cluster():
         if isinstance(self.absorber, str):
             self.absorber_z = atomic_number(self.absorber)
 
-    def parse_ciftext(self, ciftext=None, absorber=None):
+    def parse_ciftext(
+        self, ciftext: Union[str, None] = None, absorber: Union[str, int, None] = None
+    ):
+        """
+        re-initialize ciftext and absorber if either argument is not None and
+        read the structure
+        """
         if absorber is not None:
             self.set_absorber(absorber)
         if ciftext is not None:
@@ -157,7 +178,6 @@ class CIF_Cluster():
                 all_sites[xat][label] = self.atom_sites[xat][i]
         self.all_sites = all_sites
 
-
     def build_cluster(self, absorber=None, absorber_site=1, cluster_size=None):
         if absorber is not None:
             self.set_absorber(absorber)
@@ -220,7 +240,7 @@ def cif_extra_titles(cifid):
     """get 'extra titles' from AMCSD cif id"""
     try:
         cif = get_cif(cifid)
-    except:
+    except Exception:
         return []
 
     # titles from CIF
