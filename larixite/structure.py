@@ -26,11 +26,16 @@ from .utils import get_color_logger
 
 logger = get_color_logger()
 
+if logger.level != 10:
+    import warnings
+
+    warnings.filterwarnings("ignore", category=UserWarning, module="pymatgen")
+
 
 def mol2struct(molecule: Molecule) -> Structure:
     """Convert pymatgen Molecule to a pymatgen Structure"""
     alat, blat, clat = 1, 1, 1
-    #extend the lattice
+    # extend the lattice
     alat, blat, clat = np.max(molecule.cart_coords, axis=0)
     lattice = Lattice.from_parameters(
         a=alat, b=blat, c=clat, alpha=90, beta=90, gamma=90
