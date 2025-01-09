@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-site configuration
+Various utilities for Larixite
 """
 
 import os
