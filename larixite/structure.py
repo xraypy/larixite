@@ -15,6 +15,7 @@ Wrapper on top of pymatgen to get structures from structural files
 
 import numpy as np
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Union
 from pymatgen.core import Molecule, Structure, Element, Lattice
 from pymatgen.io.xyz import XYZ
@@ -30,6 +31,14 @@ if logger.level != 10:
     import warnings
 
     warnings.filterwarnings("ignore", category=UserWarning, module="pymatgen")
+
+
+@dataclass
+class StructureGroup:
+    name: str
+    label: str
+    filepath: Path
+    struct: Structure
 
 
 def mol2struct(molecule: Molecule) -> Structure:
@@ -49,34 +58,62 @@ def mol2struct(molecule: Molecule) -> Structure:
     return struct
 
 
-def get_structure(file: Union[str, Path], frame: int = 0) -> Structure:
-    """Get a pymatgen Structure from CIF/XYZ/MPJSON file"""
-    if isinstance(file, str):
-        file = Path(file)
-    if not file.exists():
-        errmsg = f"{file} not found"
+def get_structure(filepath: Union[str, Path], frame: int = 0) -> Structure:
+    """Get a pymatgen Structure from CIF/XYZ file"""
+    if isinstance(filepath, str):
+        filepath = Path(filepath)
+    if not filepath.exists():
+        errmsg = f"{filepath} not found"
         logger.error(errmsg)
         raise FileNotFoundError(errmsg)
-
-    if file.suffix == ".cif":
+    #: CIF
+    if filepath.suffix == ".cif":
         try:
-            struct = Structure.from_file(file, **PMG_CIF_OPTS)
-        except MPRestError:
-            logger.error(f"error reading {file}")
-            raise
+            structs = CifParser(filepath, **PMG_CIF_OPTS)
+        except Exception:
+            raise ValueError(f"could not parse text of CIF from {filepath}")
+        try:
+            struct = structs.parse_structures()[0]
+        except Exception:
+            raise ValueError("could not get structure from text of CIF")
         logger.debug("structure created from a CIF file")
-    elif file.suffix == ".xyz":
-        xyz = XYZ.from_file(file)
+        return struct
+    #: XYZ
+    if filepath.suffix == ".xyz":
+        xyz = XYZ.from_file(filepath)
         molecules = xyz.all_molecules
         mol = molecules[frame]
         struct = mol2struct(mol)
         logger.debug("structure created from a XYZ file")
-    elif file.suffix == ".mpjson":
-        struct = Structure.from_dict(json.load(open(file, "r")))
-        logger.debug("structure created from JSON file")
-    else:
-        errmsg = "only CIF, XYZ and MPJSON files are currently supported"
-        logger.error(errmsg)
-        raise NotImplementedError(errmsg)
+        return struct
+    #: UNSUPPORTED
+    raise ValueError(f"file type {filepath.suffix} not supported")
 
-    return struct
+
+def get_structs_from_dir(
+    structsdir: Union[str, Path],
+    globstr: str = "*",
+    exclude_names: list[str] = None,
+    **kwargs,
+) -> list[StructureGroup]:
+    """Get a list of Structures from a directory"""
+    if isinstance(structsdir, str):
+        structsdir = Path(structsdir)
+    structs_paths = list(structsdir.glob(globstr))
+    if exclude_names is not None:
+        structs_paths = [
+            struct for struct in structs_paths if struct.name not in exclude_names
+        ]
+    structs = []
+    for istruct, struct_path in enumerate(structs_paths):
+        struct = get_structure(struct_path, **kwargs)
+        logger.info(f"{istruct}: {struct_path.name}")
+        structs.append(
+            StructureGroup(
+                name=struct_path.name,
+                label=struct_path.stem,
+                filepath=struct_path,
+                struct=struct,
+            )
+        )
+    return structs
