@@ -61,7 +61,7 @@ def mol2struct(molecule: Molecule) -> Structure:
 
 def get_structure(
     filepath: Union[str, Path], absorber: str, frame: int = 0
-) -> Structure:
+) -> XasStructureGroup:
     """Get a XasStructureGroup from a structural files
 
 
