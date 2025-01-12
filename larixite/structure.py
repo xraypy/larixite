@@ -17,11 +17,12 @@ import numpy as np
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Union
-from pymatgen.core import Molecule, Structure, Element, Lattice
+from pymatgen.core import Molecule, Structure, Element, Lattice, Site
 from pymatgen.io.xyz import XYZ
 from pymatgen.io.cif import CifParser
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from .amcsd_utils import PMG_CIF_OPTS
-from .utils import get_color_logger
+from .utils import get_color_logger, fcompact
 
 logger = get_color_logger()
 
@@ -29,6 +30,23 @@ if logger.level != 10:
     import warnings
 
     warnings.filterwarnings("ignore", category=UserWarning, module="pymatgen")
+
+
+def site_label(site: Site) -> str:
+    """
+    return a string label for a pymatgen Site object,
+    using the species string and fractional coordinates
+
+    Parameters
+    ----------
+    site : pymatgen Site object
+
+    Returns
+    -------
+    str
+    """
+    coords = ",".join([fcompact(s) for s in site.frac_coords])
+    return f"{site.species_string}[{coords}]"
 
 
 @dataclass
@@ -40,6 +58,17 @@ class XasStructureGroup:
     filepath: Path  #: Path object to the input file
     struct: Structure  #: pymatgen Structure
     absorber: Element  #: pymatgen Element  #: pymatgen Element of the absorbing element
+    absorber_site: int = 1  #: site index with absorber
+    radius: float = 7  #: radius of the calculation from the absorbing atom
+
+    @property
+    def cluster_size(self):
+        """The size of the cluster is 2.5 Angstrom larger than the radius"""
+        return self.radius + 2.5
+
+    @cluster_size.setter
+    def cluster_size(self, value: float):
+        self.radius = value - 2.5
 
 
 def mol2struct(molecule: Molecule) -> Structure:
@@ -123,8 +152,8 @@ def get_structs_from_dir(
         ]
     if isinstance(absorbers, str):
         absorbers = [absorbers] * len(structs_paths)
-    assert len(structs_paths) == len(
-        absorbers
+    assert (
+        len(structs_paths) == len(absorbers)
     ), f"number of structures ({len(structs_paths)}) != number of absorbers ({len(absorbers)})"
     structs = []
     for istruct, struct_path in enumerate(structs_paths):
@@ -134,3 +163,114 @@ def get_structs_from_dir(
     return structs
 
 
+def build_sites(xsg: XasStructureGroup):
+    """parse sites of the structure to get several components:
+
+    struct.sites:   list of all sites as parsed by pymatgen
+    site_labels:    list of site labels
+    unique_sites:   list of (site[0], wyckoff sym) for unique xtal sites
+    unique_map:     mapping of all site_labels to unique_site index
+    absorber_sites: list of unique sites with absorber
+
+    """
+    # get equivalent sites, mapping of all sites to unique sites,
+    # and list of site indexes with absorber
+
+    xsg.formula = xsg.struct.composition.reduced_formula
+    sga = SpacegroupAnalyzer(xsg.struct)
+    xsg.space_group = sga.get_symmetry_dataset().international
+
+    sym_struct = sga.get_symmetrized_structure()
+    wyckoff_symbols = sym_struct.wyckoff_symbols
+
+    xsg.site_labels = []
+    for site in xsg.struct.sites:
+        xsg.site_labels.append(site_label(site))
+
+    xsg.unique_sites = []
+    xsg.unique_map = {}
+    xsg.absorber_sites = []
+    absorber = xsg.absorber.name
+    for i, sites in enumerate(sym_struct.equivalent_sites):
+        xsg.unique_sites.append((sites[0], len(sites), wyckoff_symbols[i]))
+        for site in sites:
+            xsg.unique_map[site_label(site)] = i + 1
+        if absorber in site.species_string:
+            xsg.absorber_sites.append(i)
+
+    xsg.atom_sites = {}
+    xsg.atom_site_labels = {}
+
+    for i, dat in enumerate(xsg.unique_sites):
+        site = dat[0]
+        label = site_label(site)
+        for species in site.species:
+            elem = species.name
+            if elem in xsg.atom_sites:
+                xsg.atom_sites[elem].append(i + 1)
+                xsg.atom_site_labels[elem].append(label)
+            else:
+                xsg.atom_sites[elem] = [i + 1]
+                xsg.atom_site_labels[elem] = [label]
+
+    all_sites = {}
+    for xat in xsg.atom_site_labels.keys():
+        all_sites[xat] = {}
+        for i, label in enumerate(xsg.atom_site_labels[xat]):
+            all_sites[xat][label] = xsg.atom_sites[xat][i]
+    xsg.all_sites = all_sites
+
+
+def build_cluster(
+    xsg: XasStructureGroup,
+    absorber_site=None,
+    radius=None,
+):
+    if absorber_site not in xsg.atom_sites[xsg.absorber]:
+        raise ValueError(
+            f"invalid site for absorber {absorber}: must be in {xsg.atom_sites[xsg.absorber]}"
+        )
+    if radius is not None:
+        xsg.radius = radius
+    cluster_size = xsg.cluster_size
+    csize2 = cluster_size**2
+    site_atoms = {}  # map xtal site with list of atoms occupying that site
+    site_tags = {}
+
+    for i, site in enumerate(xsg.struct.sites):
+        label = site_label(site)
+        s_unique = xsg.unique_map.get(label, 0)
+        site_species = [e.symbol for e in site.species]
+        if len(site_species) > 1:
+            s_els = [s.symbol for s in site.species.keys()]
+
+            s_wts = [s for s in site.species.values()]
+            site_atoms[i] = rng.choices(s_els, weights=s_wts, k=1000)
+            site_tags[i] = f"({site.species_string:s})_{s_unique:d}"
+        else:
+            site_atoms[i] = [site_species[0]] * 1000
+            site_tags[i] = f"{site.species_string:s}_{s_unique:d}"
+
+    # atom0 = xsg.struct[a_index]
+    atom0 = xsg.unique_sites[absorber_site - 1][0]
+    sphere = xsg.struct.get_neighbors(atom0, xsg.cluster_size)
+
+    xsg.symbols = [xsg.absorber]
+    xsg.coords = [[0, 0, 0]]
+    site0_species = [e.symbol for e in atom0.species]
+    if len(site0_species) > 1:
+        xsg.tags = [f"({atom0.species_string})_{absorber_site:d}"]
+    else:
+        xsg.tags = [f"{atom0.species_string}_{absorber_site:d}"]
+
+    for i, site_dist in enumerate(sphere):
+        s_index = site_dist[0].index
+        site_symbol = site_atoms[s_index].pop()
+
+        coords = site_dist[0].coords - atom0.coords
+        if (coords[0] ** 2 + coords[1] ** 2 + coords[2] ** 2) < csize2:
+            xsg.tags.append(site_tags[s_index])
+            xsg.symbols.append(site_symbol)
+            xsg.coords.append(coords)
+
+    xsg.molecule = Molecule(xsg.symbols, xsg.coords)
