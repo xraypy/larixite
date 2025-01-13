@@ -24,7 +24,7 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from .amcsd_utils import PMG_CIF_OPTS
 from .utils import get_color_logger, fcompact
 
-logger = get_color_logger()
+logger = get_color_logger("larixite.structure")
 
 if logger.level != 10:
     import warnings

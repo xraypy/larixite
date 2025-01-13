@@ -21,12 +21,13 @@ from pymatgen.io.xyz import XYZ
 from pymatgen.io.cif import CifParser
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-import larch.utils.logging as logging
 from larch.utils import mkdir, unixpath
 
 from larch.site_config import user_larchdir
 from larch.io import read_ascii
 from larch.math.convolution1D import lin_gamma, conv
+
+from .utils import get_color_logger
 
 try:
     import pandas as pd
@@ -45,7 +46,7 @@ except ImportError:
 
 
 # initialize the logger
-logger = logging.getLogger("struct2xas", level="INFO")
+logger = get_color_logger("larixite.struct2xas", level="WARNING")
 
 
 def _get_timestamp() -> str:
