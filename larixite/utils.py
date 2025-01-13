@@ -75,7 +75,7 @@ class ColorFormatter(logging.Formatter):
     bold_red = "\x1b[31;1m"
     green = "\x1b[32;21m"
     reset = "\x1b[0m"
-    format = "[%(name)-s | %(levelname)-8s] %(message)s" #: '%(asctime)s' redundant
+    format = "[%(name)-s | %(levelname)-8s] %(message)s"  #: '%(asctime)s' redundant
 
     FORMATS = {
         logging.DEBUG: grey + format + reset,
@@ -100,9 +100,9 @@ log_levels = {
 }
 
 
-def get_color_logger(level="INFO"):
+def get_color_logger(name="larixite", level="INFO"):
     """Return larixite logger with color output"""
-    logger = logging.getLogger("larixite")
+    logger = logging.getLogger(name)
     logger.setLevel(log_levels[level])
     formatter = ColorFormatter()
     handler = logging.StreamHandler()
@@ -110,3 +110,14 @@ def get_color_logger(level="INFO"):
     logger.handlers.clear()
     logger.addHandler(handler)
     return logger
+
+
+def show_loggers(clear_handlers=False):
+    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+    for logger in loggers:
+        print(f"-> Logger: {logger.name}")
+        if clear_handlers:
+            logger.handlers.clear()
+        for handler in logger.handlers:
+            print(f"+-> Handler: {handler}")
+            print(f"+-> Level: {handler.level} ({logging.getLevelName(handler.level)})")
