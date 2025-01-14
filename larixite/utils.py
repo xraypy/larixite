@@ -100,8 +100,8 @@ log_levels = {
 }
 
 
-def get_color_logger(name="larixite", level="INFO"):
-    """Return larixite logger with color output"""
+def get_logger(name="larixite", level="INFO"):
+    """Get a custom logger for larixite"""
     logger = logging.getLogger(name)
     logger.setLevel(log_levels[level])
     formatter = ColorFormatter()
@@ -113,6 +113,7 @@ def get_color_logger(name="larixite", level="INFO"):
 
 
 def show_loggers(clear_handlers=False):
+    """Show all existing loggers with their handlers (with the possibility to clear them)"""
     loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
     for logger in loggers:
         print(f"-> Logger: {logger.name}")

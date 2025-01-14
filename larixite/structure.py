@@ -22,9 +22,9 @@ from pymatgen.io.xyz import XYZ
 from pymatgen.io.cif import CifParser
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from .amcsd_utils import PMG_CIF_OPTS
-from .utils import get_color_logger, fcompact
+from .utils import get_logger, fcompact
 
-logger = get_color_logger("larixite.structure")
+logger = get_logger("larixite.structure")
 
 if logger.level != 10:
     import warnings
