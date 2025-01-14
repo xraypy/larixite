@@ -59,7 +59,7 @@ class XasStructureGroup:
     struct: Structure  #: pymatgen Structure
     absorber: Element  #: pymatgen Element  #: pymatgen Element of the absorbing element
     absorber_site: int = 1  #: site index with absorber
-    radius: float = 7  #: radius of the calculation from the absorbing atom
+    radius: float = 7  #: radius of the absorption sphere from the absorbing atom
 
     @property
     def cluster_size(self):
@@ -72,7 +72,7 @@ class XasStructureGroup:
 
 
 def mol2struct(molecule: Molecule) -> Structure:
-    """Convert pymatgen Molecule to a pymatgen Structure"""
+    """Convert a pymatgen Molecule to a pymatgen Structure"""
     alat, blat, clat = 1, 1, 1
     # extend the lattice
     alat, blat, clat = np.max(molecule.cart_coords, axis=0)
@@ -91,13 +91,22 @@ def mol2struct(molecule: Molecule) -> Structure:
 def get_structure(
     filepath: Union[str, Path], absorber: str, frame: int = 0
 ) -> XasStructureGroup:
-    """Get a XasStructureGroup from a structural files
+    """
+    Get a XasStructureGroup from a structural file.
 
+    Parameters
+    ----------
+    filepath : str or Path
+        Filepath to CIF/XYZ file.
+    absorber : str
+        Atomic symbol of the absorbing element.
+    frame : int, optional
+        Index of the structure in the CIF/XYZ file.
 
-    :param filepath: filepath to CIF/XYZ file
-    :param absorber: atomic symbol of the absorbing element
-    :param frame: index of the structure in the CIF/XYZ file
-
+    Returns
+    -------
+    XasStructureGroup
+        The XAS structure group for the specified file and absorber.
     """
     if isinstance(filepath, str):
         filepath = Path(filepath)
@@ -142,7 +151,38 @@ def get_structs_from_dir(
     exclude_names: list[str] = None,
     **kwargs,
 ) -> list[XasStructureGroup]:
-    """Get a list of XasStructureGroup from a directory"""
+    """Get a list of XasStructureGroup from a directory containing structural files
+
+    Parameters
+    ----------
+    structsdir : str or Path
+        directory containing the structural files
+    absorbers : list of str or str
+        list of atomic symbols of the absorbing elements for each file or a single symbol for all
+    globstr : str, optional
+        string to filter the files in the directory
+    exclude_names : list of str, optional
+        list of filenames to exclude
+    **kwargs : dict, optional
+        additional keyword arguments to pass to `get_structure`
+
+    Returns
+    -------
+    list of XasStructureGroup
+        list of XasStructureGroup objects
+
+    Examples
+    --------
+
+    from pathlib import Path
+    curdir = Path().cwd()
+    basedir = curdir.parent
+    testdir = basedir / "test"
+    structsdir = testdir / "structs"
+    abs = "Fe"
+    structs = get_structs_from_dir(structsdir, abs, globstr=f"*{abs}*", exclude_names=["NAMING.tmpl"])
+
+    """
     if isinstance(structsdir, str):
         structsdir = Path(structsdir)
     structs_paths = list(structsdir.glob(globstr))
