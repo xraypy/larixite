@@ -1496,4 +1496,39 @@ def save_mp_structure(api_key: str, material_id: str, parent_path: str = None) -
         material id (format mp-xxxx) from Materials Project
     parent_path : str
         output path where to store the Structure files
-        if None, user_larchdir + 'mp_st
+        if None, user_larchdir + 'mp_structs' is used
+
+    Returns
+    -------
+        name of structure file, which will have an 'mpjson' extension
+
+    Notes
+    ------
+    The structure is saved as json that can be loaded with
+          from pymatgen.core import Structure
+          import json
+          struct = Structure.from_dict(json.load(open(filename, 'r')))
+
+    """
+
+    if parent_path is None:
+        parent_path = structure_folders()["mp_structs"]
+
+    try:
+        from mp_api.client import MPRester
+    except ImportError:
+        print("need to install mp_api:  pip install mp_api")
+
+    mpr = MPRester(api_key)
+    results = mpr.summary.search(
+        material_ids=[material_id], fields=["structure", "formula_pretty"]
+    )
+    formula = results[0].formula_pretty
+    structure = results[0].structure
+
+    outfile = os.path.join(parent_path, f"{formula}_{material_id}.mpjson")
+    with open(outfile, "w") as fh:
+        fh.write(structure.to_json())
+    logger.info(f"saved {material_id} to {outfile}")
+
+    return outfile
