@@ -21,13 +21,12 @@ from pymatgen.io.xyz import XYZ
 from pymatgen.io.cif import CifParser
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
+import larch.utils.logging as logging
 from larch.utils import mkdir, unixpath
 
 from larch.site_config import user_larchdir
 from larch.io import read_ascii
 from larch.math.convolution1D import lin_gamma, conv
-
-from .utils import get_color_logger
 
 try:
     import pandas as pd
@@ -45,8 +44,14 @@ except ImportError:
     HAS_PY3DMOL = False
 
 
+__author__ = ["Beatriz G. Foschiani", "Mauro Rovezzi"]
+__email__ = ["beatrizgfoschiani@gmail.com", "mauro.rovezzi@esrf.fr"]
+__credits__ = ["Jade Chongsathapornpong", "Marius Retegan"]
+__version__ = "2024.1.0"
+
+
 # initialize the logger
-logger = get_color_logger("larixite.struct2xas", level="WARNING")
+logger = logging.getLogger("struct2xas", level="INFO")
 
 
 def _get_timestamp() -> str:
@@ -65,6 +70,35 @@ def _pprint(matrix):
     table = [fmt.format(*row) for row in s]
     print("\n".join(table))
 
+
+def xyz2struct(molecule):
+    """Convert pymatgen molecule to dummy pymatgen structure"""
+
+    alat, blat, clat = 1, 1, 1
+
+    # Set the lattice dimensions in each direction
+    for i in range(len(molecule) - 1):
+        if molecule.cart_coords[i][0] > molecule.cart_coords[i + 1][0]:
+            alat = molecule.cart_coords[i][0]
+        if molecule.cart_coords[i][1] > molecule.cart_coords[i + 1][1]:
+            blat = molecule.cart_coords[i][1]
+        if molecule.cart_coords[i][2] > molecule.cart_coords[i + 1][2]:
+            clat = molecule.cart_coords[i][2]
+
+    # Set the lattice dimensions in each direction
+    lattice = Lattice.from_parameters(
+        a=alat, b=blat, c=clat, alpha=90, beta=90, gamma=90
+    )
+
+    # Create a list of species
+    species = [Element(sym) for sym in molecule.species]
+
+    # Create a list of coordinates
+    coords = molecule.cart_coords
+
+    # Create the Structure object
+    struct = Structure(lattice, species, coords, coords_are_cartesian=True)
+    return struct
 
 
 def structure_folders():
@@ -1462,39 +1496,4 @@ def save_mp_structure(api_key: str, material_id: str, parent_path: str = None) -
         material id (format mp-xxxx) from Materials Project
     parent_path : str
         output path where to store the Structure files
-        if None, user_larchdir + 'mp_structs' is used
-
-    Returns
-    -------
-        name of structure file, which will have an 'mpjson' extension
-
-    Notes
-    ------
-    The structure is saved as json that can be loaded with
-          from pymatgen.core import Structure
-          import json
-          struct = Structure.from_dict(json.load(open(filename, 'r')))
-
-    """
-
-    if parent_path is None:
-        parent_path = structure_folders()["mp_structs"]
-
-    try:
-        from mp_api.client import MPRester
-    except ImportError:
-        print("need to install mp_api:  pip install mp_api")
-
-    mpr = MPRester(api_key)
-    results = mpr.summary.search(
-        material_ids=[material_id], fields=["structure", "formula_pretty"]
-    )
-    formula = results[0].formula_pretty
-    structure = results[0].structure
-
-    outfile = os.path.join(parent_path, f"{formula}_{material_id}.mpjson")
-    with open(outfile, "w") as fh:
-        fh.write(structure.to_json())
-    logger.info(f"saved {material_id} to {outfile}")
-
-    return outfile
+        if None, user_larchdir + 'mp_st
