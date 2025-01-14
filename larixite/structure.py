@@ -16,7 +16,7 @@ Wrapper on top of pymatgen to get structures from structural files
 import numpy as np
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Literal
 from pymatgen.core import Molecule, Structure, Element, Lattice, Site
 from pymatgen.io.xyz import XYZ
 from pymatgen.io.cif import CifParser
@@ -56,6 +56,7 @@ class XasStructureGroup:
     name: str  #: unique name, usually the input filename
     label: str  #: a short label, usually the input filename without extension
     filepath: Path  #: Path object to the input file
+    file_format: Literal["cif", "xyz"]  #: input file format (supported only)
     struct: Structure  #: pymatgen Structure
     absorber: Element  #: pymatgen Element  #: pymatgen Element of the absorbing element
     absorber_site: int = 1  #: site index with absorber
@@ -124,6 +125,7 @@ def get_structure(
             struct = structs.parse_structures()[frame]
         except Exception:
             raise ValueError(f"could not get structure {frame} from text of CIF")
+        file_format = "cif"
         logger.debug("structure created from a CIF file")
     #: XYZ
     elif filepath.suffix == ".xyz":
@@ -131,6 +133,7 @@ def get_structure(
         molecules = xyz.all_molecules
         mol = molecules[frame]
         struct = mol2struct(mol)
+        file_format = "xyz"
         logger.debug("structure created from a XYZ file")
     else:
         #: UNSUPPORTED
@@ -139,6 +142,7 @@ def get_structure(
         name=filepath.name,
         label=filepath.stem,
         filepath=filepath,
+        file_format=file_format,
         struct=struct,
         absorber=Element(absorber),
     )
