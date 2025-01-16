@@ -58,8 +58,8 @@ class XasStructureGroup:
     filepath: Path  #: Path object to the input file
     file_format: Literal["cif", "xyz"]  #: input file format (supported only)
     struct: Structure  #: pymatgen Structure
-    absorber: Element  #: pymatgen Element  #: pymatgen Element of the absorbing element
-    absorber_site: int = 1  #: site index with absorber
+    absorber: Element  #: pymatgen Element for the absorber
+    absorber_site: int = 0  #: site index for the absorber
     radius: float = 7  #: radius of the absorption sphere from the absorbing atom
 
     @property
@@ -70,6 +70,113 @@ class XasStructureGroup:
     @cluster_size.setter
     def cluster_size(self, value: float):
         self.radius = value - 2.5
+
+    @property
+    def site_labels(self):
+        """List all sites, e.g. `Fe[0.125,0.125,0.125]`"""
+        return [site_label(site) for site in self.struct.sites]
+
+    @property
+    def formula(self):
+        return self.struct.composition.reduced_formula
+
+    @property
+    def sga(self):
+        return SpacegroupAnalyzer(self.struct)
+
+    @property
+    def space_group(self):
+        return self.sga.get_symmetry_dataset().international
+
+    @property
+    def sym_struct(self):
+        return self.sga.get_symmetrized_structure()
+
+    def get_idx_in_struct(self, atom_coords):
+        """Get the index corresponding to the given atomic coordinates (fractional)"""
+        for idx, atom in enumerate(self.struct):
+            if np.allclose(atom.coords, atom_coords, atol=0.001) is True:
+                return idx
+        errmsg = f"atomic coordinates {atom_coords} not found in self.struct"
+        logger.error(errmsg)
+        # raise IndexError(errmsg)
+        return None
+
+    def get_occupancy(self, species_string: str) -> float:
+        """Get the occupancy of the absorbing atom from the species string"""
+        try:
+            ats_occ = species_string.split(",")
+            at_occ = [at for at in ats_occ if self.absorber.name in at][0]
+            occupancy = float(at_occ.split(":")[1])
+        except Exception:
+            occupancy = 1
+        return occupancy
+
+    def get_absorber_sites(self):
+        """Get the indexes of the absorbing atoms in the structure"""
+        absorber_sites = []
+        for i, sites in enumerate(self.sym_struct.equivalent_sites):
+            site = sites[0]
+            if self.absorber.name in site.species_string:
+                occupancy = self.get_occupancy(site.species_string)
+                site_index = self.get_idx_in_struct(site.coords)
+                if occupancy != 1:
+                    logger.warning(
+                        f"Absorber {self.absorber.name} has occupancy of {occupancy} on site {site_index}"
+                    )
+                absorber_sites.append(site_index)
+        if len(absorber_sites) == 0:
+            errmsg = f"Absorber {self.absorber.name} not found in structure {self.name}"
+            logger.error(errmsg)
+            raise AttributeError(errmsg)
+        return absorber_sites
+
+    def build_sites(self):
+        """parse sites of the structure to get several components:
+
+        struct.sites:   list of all sites as parsed by pymatgen
+        site_labels:    list of site labels (e.g. 'Fe[0.125,0.125,0.125]')
+        unique_sites:   list of (site[0], wyckoff sym) for unique xtal sites
+        unique_map:     mapping of all site_labels to unique_site index
+        absorber_sites: list of unique sites with absorber
+
+        """
+        # get equivalent sites, mapping of all sites to unique sites,
+        # and list of site indexes with absorber
+        sym_struct = self.sym_struct
+        wyckoff_symbols = sym_struct.wyckoff_symbols
+
+        self.unique_sites = []
+        self.unique_map = {}
+        self.absorber_sites = []
+        absorber = self.absorber.name
+        for i, sites in enumerate(sym_struct.equivalent_sites):
+            self.unique_sites.append((sites[0], len(sites), wyckoff_symbols[i]))
+            for site in sites:
+                self.unique_map[site_label(site)] = i + 1
+            if absorber in site.species_string:
+                self.absorber_sites.append(i)
+
+        self.atom_sites = {}
+        self.atom_site_labels = {}
+        for i, dat in enumerate(self.unique_sites):
+            site = dat[0]
+            label = site_label(site)
+            for species in site.species:
+                elem = species.name
+                if elem in self.atom_sites:
+                    self.atom_sites[elem].append(i + 1)
+                    self.atom_site_labels[elem].append(label)
+                else:
+                    self.atom_sites[elem] = [i + 1]
+                    self.atom_site_labels[elem] = [label]
+
+        all_sites = {}
+        for xat in self.atom_site_labels.keys():
+            all_sites[xat] = {}
+            for i, label in enumerate(self.atom_site_labels[xat]):
+                all_sites[xat][label] = self.atom_sites[xat][i]
+        self.all_sites = all_sites
 
 
 def mol2struct(molecule: Molecule) -> Structure:
@@ -205,64 +312,6 @@ def get_structs_from_dir(
         logger.info(f"{istruct}: {struct.name}")
         structs.append(struct)
     return structs
-
-
-def build_sites(xsg: XasStructureGroup):
-    """parse sites of the structure to get several components:
-
-    struct.sites:   list of all sites as parsed by pymatgen
-    site_labels:    list of site labels
-    unique_sites:   list of (site[0], wyckoff sym) for unique xtal sites
-    unique_map:     mapping of all site_labels to unique_site index
-    absorber_sites: list of unique sites with absorber
-
-    """
-    # get equivalent sites, mapping of all sites to unique sites,
-    # and list of site indexes with absorber
-
-    xsg.formula = xsg.struct.composition.reduced_formula
-    sga = SpacegroupAnalyzer(xsg.struct)
-    xsg.space_group = sga.get_symmetry_dataset().international
-
-    sym_struct = sga.get_symmetrized_structure()
-    wyckoff_symbols = sym_struct.wyckoff_symbols
-
-    xsg.site_labels = []
-    for site in xsg.struct.sites:
-        xsg.site_labels.append(site_label(site))
-
-    xsg.unique_sites = []
-    xsg.unique_map = {}
-    xsg.absorber_sites = []
-    absorber = xsg.absorber.name
-    for i, sites in enumerate(sym_struct.equivalent_sites):
-        xsg.unique_sites.append((sites[0], len(sites), wyckoff_symbols[i]))
-        for site in sites:
-            xsg.unique_map[site_label(site)] = i + 1
-        if absorber in site.species_string:
-            xsg.absorber_sites.append(i)
-
-    xsg.atom_sites = {}
-    xsg.atom_site_labels = {}
-
-    for i, dat in enumerate(xsg.unique_sites):
-        site = dat[0]
-        label = site_label(site)
-        for species in site.species:
-            elem = species.name
-            if elem in xsg.atom_sites:
-                xsg.atom_sites[elem].append(i + 1)
-                xsg.atom_site_labels[elem].append(label)
-            else:
-                xsg.atom_sites[elem] = [i + 1]
-                xsg.atom_site_labels[elem] = [label]
-
-    all_sites = {}
-    for xat in xsg.atom_site_labels.keys():
-        all_sites[xat] = {}
-        for i, label in enumerate(xsg.atom_site_labels[xat]):
-            all_sites[xat][label] = xsg.atom_sites[xat][i]
-    xsg.all_sites = all_sites
 
 
 def build_cluster(
