@@ -18,7 +18,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Union, Literal
 from pymatgen.core import Molecule, Structure, Element, Lattice, Site
-from pymatgen.io.xyz import XYZ
+#from pymatgen.io.xyz import XYZ
 from pymatgen.io.cif import CifParser
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from .amcsd_utils import PMG_CIF_OPTS
@@ -51,15 +51,16 @@ def site_label(site: Site) -> str:
 
 @dataclass
 class XasStructureGroup:
-    """ "Data container for an atomic structure model and absorber"""
+    """Data container for an atomic structure model with an absorber"""
 
     name: str  #: unique name, usually the input filename
     label: str  #: a short label, usually the input filename without extension
     filepath: Path  #: Path object to the input file
-    file_format: Literal["cif", "xyz"]  #: input file format (supported only)
+    file_format: Literal["cif"]  #: input file format (supported only)
     struct: Structure  #: pymatgen Structure
+    mol: Molecule  #: pymatgen Molecule
     absorber: Element  #: pymatgen Element for the absorber
-    absorber_site: int = 0  #: site index for the absorber
+    absorber_idx: Union[int, None] = None  #: site index for the absorber
     radius: float = 7  #: radius of the absorption sphere from the absorbing atom
 
     @property
@@ -92,8 +93,22 @@ class XasStructureGroup:
     def sym_struct(self):
         return self.sga.get_symmetrized_structure()
 
+    @property
+    def absorber_site(self):
+        if self.absorber_idx is None:
+            errmsg = "Absorber site index not set!"
+            logger.error(errmsg)
+            return IndexError(errmsg)
+        return self.struct[self.absorber_idx]
+
+    @property
+    def cluster(self):
+        return self.struct.get_sites_in_sphere(
+            self.absorber_site.coords, self.cluster_size
+        )
+
     def get_idx_in_struct(self, atom_coords):
-        """Get the index corresponding to the given atomic coordinates (fractional)"""
+        """Get the index corresponding to the given atomic coordinates (cartesian)"""
         for idx, atom in enumerate(self.struct):
             if np.allclose(atom.coords, atom_coords, atol=0.001) is True:
                 return idx
@@ -180,8 +195,7 @@ class XasStructureGroup:
 
 
 def mol2struct(molecule: Molecule) -> Structure:
-    """Convert a pymatgen Molecule to a pymatgen Structure"""
-    alat, blat, clat = 1, 1, 1
+    """Convert a pymatgen Molecule to Structure"""
     # extend the lattice
     alat, blat, clat = np.max(molecule.cart_coords, axis=0)
     lattice = Lattice.from_parameters(
@@ -232,26 +246,29 @@ def get_structure(
             struct = structs.parse_structures()[frame]
         except Exception:
             raise ValueError(f"could not get structure {frame} from text of CIF")
+        mol = Molecule.from_dict(struct.as_dict())
         file_format = "cif"
         logger.debug("structure created from a CIF file")
-    #: XYZ
-    elif filepath.suffix == ".xyz":
-        xyz = XYZ.from_file(filepath)
-        molecules = xyz.all_molecules
-        mol = molecules[frame]
-        struct = mol2struct(mol)
-        file_format = "xyz"
-        logger.debug("structure created from a XYZ file")
+    #: XYZ -> TODO: implement this
+    #elif filepath.suffix == ".xyz":
+    #    xyz = XYZ.from_file(filepath)
+    #    molecules = xyz.all_molecules
+    #    mol = molecules[frame]
+    #    struct = mol2struct(mol)
+    #    file_format = "xyz"
+    #    logger.debug("structure created from a XYZ file")
     else:
         #: UNSUPPORTED
-        raise ValueError(f"file type {filepath.suffix} not supported")
+        raise ValueError(f"File type {filepath.suffix} not supported yet")
     return XasStructureGroup(
         name=filepath.name,
         label=filepath.stem,
         filepath=filepath,
         file_format=file_format,
         struct=struct,
+        mol=mol,
         absorber=Element(absorber),
+        absorber_idx=None,
     )
 
 
