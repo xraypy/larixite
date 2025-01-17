@@ -50,7 +50,7 @@ def site_label(site: Site) -> str:
 
 
 @dataclass
-class XasStructureGroup:
+class XasStructure:
     """Data container for an atomic structure model with an absorber"""
 
     name: str  #: unique name, usually the input filename
@@ -212,9 +212,9 @@ def mol2struct(molecule: Molecule) -> Structure:
 
 def get_structure(
     filepath: Union[str, Path], absorber: str, frame: int = 0
-) -> XasStructureGroup:
+) -> XasStructure:
     """
-    Get a XasStructureGroup from a structural file.
+    Get a XasStructure from a structural file.
 
     Parameters
     ----------
@@ -227,7 +227,7 @@ def get_structure(
 
     Returns
     -------
-    XasStructureGroup
+    XasStructure
         The XAS structure group for the specified file and absorber.
     """
     if isinstance(filepath, str):
@@ -260,7 +260,7 @@ def get_structure(
     else:
         #: UNSUPPORTED
         raise ValueError(f"File type {filepath.suffix} not supported yet")
-    return XasStructureGroup(
+    return XasStructure(
         name=filepath.name,
         label=filepath.stem,
         filepath=filepath,
@@ -278,8 +278,8 @@ def get_structs_from_dir(
     globstr: str = "*",
     exclude_names: list[str] = None,
     **kwargs,
-) -> list[XasStructureGroup]:
-    """Get a list of XasStructureGroup from a directory containing structural files
+) -> list[XasStructure]:
+    """Get a list of XasStructure from a directory containing structural files
 
     Parameters
     ----------
@@ -296,8 +296,8 @@ def get_structs_from_dir(
 
     Returns
     -------
-    list of XasStructureGroup
-        list of XasStructureGroup objects
+    list of XasStructure
+        list of XasStructure objects
 
     Examples
     --------
@@ -332,7 +332,7 @@ def get_structs_from_dir(
 
 
 def build_cluster(
-    xsg: XasStructureGroup,
+    xsg: XasStructure,
     absorber_site=None,
     radius=None,
 ):
