@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import Union
 from pymatgen.io.xyz import XYZ
 from pymatgen.io.cif import CifParser
-from pymatgen.core import Molecule, Structure, Element, Lattice, Site
+from pymatgen.core import Molecule, Structure, Element, Lattice
 from larixite.struct.xas import XasStructure
 from larixite.struct.xas_cif import XasStructureCif
 from larixite.struct.xas_xyz import XasStructureXyz
-from larixite.utils import get_logger, fcompact
+from larixite.utils import get_logger
 from larixite.amcsd_utils import PMG_CIF_OPTS
 
 logger = get_logger("larixite.struct")
@@ -24,23 +24,6 @@ if logger.level != 10:
     import warnings
 
     warnings.filterwarnings("ignore", category=UserWarning, module="pymatgen")
-
-
-def site_label(site: Site) -> str:
-    """
-    return a string label for a pymatgen Site object,
-    using the species string and fractional coordinates
-
-    Parameters
-    ----------
-    site : pymatgen Site object
-
-    Returns
-    -------
-    str
-    """
-    coords = ",".join([fcompact(s) for s in site.frac_coords])
-    return f"{site.species_string}[{coords}]"
 
 
 def mol2struct(molecule: Molecule) -> Structure:
@@ -104,7 +87,7 @@ def get_structure(
             filepath=filepath,
             file_format=file_format,
             struct=struct,
-            mol=mol,
+            molecule=mol,
             absorber=Element(absorber),
             absorber_idx=None,
         )
@@ -122,7 +105,7 @@ def get_structure(
             filepath=filepath,
             file_format=file_format,
             struct=struct,
-            mol=mol,
+            molecule=mol,
             absorber=Element(absorber),
             absorber_idx=None,
         )

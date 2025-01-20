@@ -9,7 +9,26 @@ Atomic structure with an absorber for XAS
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Union, Literal
-from pymatgen.core import Molecule, Structure, Element
+from pymatgen.core import Molecule, Structure, Element, Site
+from larixite.utils import fcompact
+
+
+def site_label(site: Site) -> str:
+    """
+    return a string label for a pymatgen Site object,
+    using the species string and fractional coordinates
+
+    Parameters
+    ----------
+    site : pymatgen Site object
+
+    Returns
+    -------
+    str
+    """
+    coords = ",".join([fcompact(s) for s in site.frac_coords])
+    return f"{site.species_string}[{coords}]"
+
 
 @dataclass
 class XasStructure:
@@ -20,7 +39,7 @@ class XasStructure:
     filepath: Path  #: Path object to the input file
     file_format: Literal["cif"]  #: input file format (supported only)
     struct: Structure  #: pymatgen Structure
-    mol: Molecule  #: pymatgen Molecule
+    molecule: Molecule  #: pymatgen Molecule
     absorber: Element  #: pymatgen Element for the absorber
     absorber_idx: Union[int, None] = None  #: site index for the absorber
     radius: float = 7  #: radius of the absorption sphere from the absorbing atom
@@ -56,6 +75,9 @@ class XasStructure:
         return self.struct.get_sites_in_sphere(
             self.absorber_site.coords, self.cluster_size
         )
+
+    def get_site(self, site_index: int):
+        return self.struct[site_index]
 
     def get_occupancy(self, species_string: str) -> float:
         """Get the occupancy of the absorbing atom from the species string"""

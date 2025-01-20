@@ -12,10 +12,19 @@ spectroscopy (XAS, XES, RIXS) from the atomic structures
 
 from dataclasses import dataclass
 from pathlib import Path
-from .structure import XasStructureGroup
+from .structure.structure import XasStructureGroup
 from .utils import get_logger
 
 logger = get_logger("larixite.fdmnes")
+
+
+@dataclass
+class FdmnesJob:
+    id: int  #: index of the job
+    description: str  #: description
+    timestamp: str  #: creation timestamp
+    path: Path  #: path for the calculation
+
 
 @dataclass
 class FdmnesInput:
