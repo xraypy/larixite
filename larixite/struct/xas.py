@@ -37,7 +37,7 @@ class XasStructure:
     name: str  #: unique name, usually the input filename
     label: str  #: a short label, usually the input filename without extension
     filepath: Path  #: Path object to the input file
-    file_format: Literal["cif"]  #: input file format (supported only)
+    file_format: Literal["cif", "xyz"]  #: input file format (supported only)
     struct: Structure  #: pymatgen Structure
     molecule: Molecule  #: pymatgen Molecule
     absorber: Element  #: pymatgen Element for the absorber
