@@ -13,27 +13,36 @@ spectroscopy (XAS, XES, RIXS) from the atomic structures
 from dataclasses import dataclass
 from typing import Union
 from pathlib import Path
-from pymatgen.core import Element
+from pymatgen.core import __version__ as pymatgen_version, Element
 from larixite.struct import get_structure
 from larixite.struct.xas import XasStructure
-from .utils import get_logger
+from larixite.utils import get_logger, strict_ascii, isotime
+from larixite.version import __version__ as larixite_version
 
 logger = get_logger("larixite.fdmnes")
 
 TEMPLATE_FOLDER = Path(Path(__file__).parent, "templates")
 
 FDMNES_DEFAULT_PARAMS = {
-    "Energpho": True,
-    "Memory_save": True,
+    "Energpho": False,
     "Quadrupole": False,
+    "Density": False,
+    "Density_all": False,
+    "SCF": True,
+    "Green": True,
+    "Memory_save": True,
     "Relativism": False,
     "Spinorbit": None,
-    "SCF": True,
     "SCFexc": False,
+    "SCFexcv": False,
     "Screening": False,
+    "Vmax": False,
     "Full_atom": False,
     "TDDFT": False,
     "PBE96": False,
+    "Atom": False,
+    "COOP": False,
+    "Convolution": True,
 }
 
 
@@ -41,9 +50,15 @@ FDMNES_DEFAULT_PARAMS = {
 class FdmnesInput:
     """ "Input parameters for FDMNES"""
 
-    structpath: Union[str, Path, XasStructure]  #: path to the structural file or XasStructure
-    absorber: Union[str, int, Element]  #: atomic symbol or number of the absorbing element
-    absorber_idx: Union[int, None] = None  #: index of the absorbing atom in the pymatgen structure
+    structpath: Union[
+        str, Path, XasStructure
+    ]  #: path to the structural file or XasStructure
+    absorber: Union[
+        str, int, Element
+    ]  #: atomic symbol or number of the absorbing element
+    absorber_idx: Union[int, None] = (
+        None  #: index of the absorbing atom in the pymatgen structure
+    )
     frame: int = 0  #: index of the frame inside the structure
     edge: Union[str, None] = None  #: edge for calculation
     radius: float = 7
@@ -63,10 +78,10 @@ class FdmnesInput:
             self.xs = self.structpath
             self.structpath = self.xs.filepath
         else:
-            self.xs = get_structure(self.structpath)
+            self.xs = get_structure(self.structpath, absorber=self.absorber)
 
         if self.tmplpath is None:
-            self.tmplpath = Path(TEMPLATE_FOLDER, "fdmnes.tmpl")
+            self.tmplpath = Path(TEMPLATE_FOLDER, "fdmnes_new.tmpl")
         if isinstance(self.tmplpath, str):
             self.tmplpath = Path(self.tmplpath)
 
@@ -134,5 +149,33 @@ class FdmnesInput:
 
         return params
 
-    def get_input(self) -> str:
-        pass
+    def get_input(self, comment: str = "") -> str:
+        params = self.params.copy()
+        template = open(self.tmplpath, "r").read()
+
+        comment = (
+            f"   {self.xs.name}: {self.absorber.symbol} ({self.absorber.Z}) {self.edge} edge"
+            + comment
+        )
+        #: fill the template
+        vers = larixite_version[:]
+        if ".post" in vers:
+            vers = vers.split(".post")[0]
+        conf = {
+            "timestamp": isotime(),
+            "version": vers,
+            "pymatgen_version": pymatgen_version,
+            "comment": comment,
+            "edge": self.edge,
+            "radius": f"{self.radius:.2f}",
+        }
+
+        for parkey, parval in params.items():
+            conf[parkey] = str(parkey) if parval is True else f"! {parkey}"
+
+        conf["absorber"] = self.absorber.symbol
+        conf["absorber_idx"] = self.absorber_idx
+
+        conf["Structure"] = "! TODO"
+
+        return strict_ascii(template.format(**conf))
