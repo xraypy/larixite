@@ -44,6 +44,9 @@ class XasStructure:
     absorber_idx: Union[int, None] = None  #: site index for the absorber
     radius: float = 7  #: radius of the absorption sphere from the absorbing atom
 
+    def __post_init__(self):
+        pass
+
     @property
     def cluster_size(self):
         """The size of the cluster is 2.5 Angstrom larger than the radius"""

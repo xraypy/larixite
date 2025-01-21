@@ -9,16 +9,18 @@ Specialize XasStructure to handle structures from XYZ files
 from dataclasses import dataclass
 import numpy as np
 from larixite.struct.xas import XasStructure
+from larixite.utils import get_logger
 
+logger = get_logger("larixite.struct")
 
 
 @dataclass
 class XasStructureXyz(XasStructure):
-
     def __post_init__(self):
         super().__post_init__()
         if self.absorber_idx is None:
-            self.absorber_idx = self.get_absorber_sites()[0][0]
+            self.absorber_idx = self.get_absorber_sites()[0]
+
     @property
     def sga(self):
         raise AttributeError("SpacegroupAnalyzer fails for XYZ files")

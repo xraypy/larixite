@@ -13,17 +13,17 @@ from random import Random
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.core import Molecule
 from larixite.struct.xas import XasStructure, site_label
-
+from larixite.utils import get_logger
 
 rng = Random()
-
+logger = get_logger("larixite.struct")
 
 @dataclass
 class XasStructureCif(XasStructure):
     def __post_init__(self):
         super().__post_init__()
         if self.absorber_idx is None:
-            self.absorber_idx = self.get_absorber_sites()[0][0]
+            self.absorber_idx = self.get_absorber_sites()[0]
 
     @property
     def sga(self):
@@ -57,7 +57,7 @@ class XasStructureCif(XasStructure):
                 site_index = self.get_idx_in_struct(site.coords)
                 if occupancy != 1:
                     logger.warning(
-                        f"Absorber {self.absorber.symbol} has occupancy of {occupancy} on site {site_index}"
+                        f"{self.name}: absorber {self.absorber.symbol} has occupancy of {occupancy} on site {site_index}"
                     )
                 absorber_sites.append(site_index)
         if len(absorber_sites) == 0:
