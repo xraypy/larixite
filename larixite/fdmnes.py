@@ -47,7 +47,7 @@ FDMNES_DEFAULT_PARAMS = {
 
 
 @dataclass
-class FdmnesInput:
+class FdmnesXasInput:
     """ "Input parameters for FDMNES"""
 
     structpath: Union[
@@ -81,7 +81,7 @@ class FdmnesInput:
             self.xs = get_structure(self.structpath, absorber=self.absorber)
 
         if self.tmplpath is None:
-            self.tmplpath = Path(TEMPLATE_FOLDER, "fdmnes_new.tmpl")
+            self.tmplpath = Path(TEMPLATE_FOLDER, "fdmnes_xas.tmpl")
         if isinstance(self.tmplpath, str):
             self.tmplpath = Path(self.tmplpath)
 
