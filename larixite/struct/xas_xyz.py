@@ -14,6 +14,11 @@ from larixite.struct.xas import XasStructure
 
 @dataclass
 class XasStructureXyz(XasStructure):
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.absorber_idx is None:
+            self.absorber_idx = self.get_absorber_sites()[0][0]
     @property
     def sga(self):
         raise AttributeError("SpacegroupAnalyzer fails for XYZ files")
@@ -47,7 +52,7 @@ class XasStructureXyz(XasStructure):
                     logger.warning(
                         f"Absorber {self.absorber.name} has occupancy of {occupancy} on site {site_index}"
                     )
-                absorber_sites.append([site_index, self.struct[site_index]])
+                absorber_sites.append(site_index)
         if len(absorber_sites) == 0:
             errmsg = f"Absorber {self.absorber.name} not found in structure {self.name}"
             logger.error(errmsg)

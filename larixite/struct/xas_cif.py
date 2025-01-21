@@ -20,6 +20,11 @@ rng = Random()
 
 @dataclass
 class XasStructureCif(XasStructure):
+    def __post_init__(self):
+        super().__post_init__()
+        if self.absorber_idx is None:
+            self.absorber_idx = self.get_absorber_sites()[0][0]
+
     @property
     def sga(self):
         return SpacegroupAnalyzer(self.struct)
@@ -56,7 +61,9 @@ class XasStructureCif(XasStructure):
                     )
                 absorber_sites.append(site_index)
         if len(absorber_sites) == 0:
-            errmsg = f"Absorber {self.absorber.symbol} not found in structure {self.name}"
+            errmsg = (
+                f"Absorber {self.absorber.symbol} not found in structure {self.name}"
+            )
             logger.error(errmsg)
             raise AttributeError(errmsg)
         return absorber_sites
