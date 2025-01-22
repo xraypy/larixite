@@ -61,7 +61,8 @@ class FdmnesXasInput:
     )
     frame: int = 0  #: index of the frame inside the structure
     edge: Union[str, None] = None  #: edge for calculation
-    radius: float = 7
+    radius: float = 7  #: radius of the calulation
+    erange: Union[str, None] = "-30.0 0.1 70.0 1.0 100"  #: energy range
     tmplpath: Union[str, Path, None] = None  #: path to the FDMNES input template
     params: Union[dict, None] = None  #: parameters for FDMNES
 
@@ -149,6 +150,9 @@ class FdmnesXasInput:
 
         return params
 
+    def build_structure(self):
+        pass
+
     def get_input(self, comment: str = "") -> str:
         params = self.params.copy()
         template = open(self.tmplpath, "r").read()
@@ -168,6 +172,7 @@ class FdmnesXasInput:
             "comment": comment,
             "edge": self.edge,
             "radius": f"{self.radius:.2f}",
+            "erange": self.erange,
         }
 
         for parkey, parval in params.items():
