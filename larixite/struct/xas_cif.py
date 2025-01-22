@@ -7,8 +7,6 @@ Specialize XasStructure to handle structures from CIF files
 """
 
 from dataclasses import dataclass
-from typing import List
-import numpy as np
 from random import Random
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.core import Molecule
@@ -20,10 +18,6 @@ logger = get_logger("larixite.struct")
 
 @dataclass
 class XasStructureCif(XasStructure):
-    def __post_init__(self):
-        super().__post_init__()
-        if self.absorber_idx is None:
-            self.absorber_idx = self.get_absorber_sites()[0]
 
     @property
     def sga(self):
@@ -37,36 +31,10 @@ class XasStructureCif(XasStructure):
     def sym_struct(self):
         return self.sga.get_symmetrized_structure()
 
-    def get_idx_in_struct(self, atom_coords):
-        """Get the index corresponding to the given atomic coordinates (cartesian)"""
-        for idx, atom in enumerate(self.struct):
-            if np.allclose(atom.coords, atom_coords, atol=0.001) is True:
-                return idx
-        errmsg = f"atomic coordinates {atom_coords} not found in self.struct"
-        logger.error(errmsg)
-        # raise IndexError(errmsg)
-        return None
+    @property
+    def equivalent_sites(self):
+        return self.sym_struct.equivalent_sites
 
-    def get_absorber_sites(self) -> List[int]:
-        """Get the indexes of the absorbing atoms in the structure"""
-        absorber_sites = []
-        for i, sites in enumerate(self.sym_struct.equivalent_sites):
-            site = sites[0]
-            if self.absorber.symbol in site.species_string:
-                occupancy = self.get_occupancy(site.species_string)
-                site_index = self.get_idx_in_struct(site.coords)
-                if occupancy != 1:
-                    logger.warning(
-                        f"{self.name}: absorber {self.absorber.symbol} has occupancy of {occupancy} on site {site_index}"
-                    )
-                absorber_sites.append(site_index)
-        if len(absorber_sites) == 0:
-            errmsg = (
-                f"Absorber {self.absorber.symbol} not found in structure {self.name}"
-            )
-            logger.error(errmsg)
-            raise AttributeError(errmsg)
-        return absorber_sites
 
     def build_sites(self):
         """Parse sites of CIF structure to add the following attributes:
@@ -113,7 +81,7 @@ class XasStructureCif(XasStructure):
         self.all_sites = all_sites
 
     def build_cluster(self):
-        """Buile a cluster around the absorber as pymatgen Molecule"""
+        """Build a cluster around the absorber as pymatgen Molecule"""
         csize2 = self.cluster_size**2
 
         site_atoms = {}  # map xtal site with list of atoms occupying that site
