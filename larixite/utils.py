@@ -65,6 +65,17 @@ def fcompact(val):
         val = val + "0"
     return val
 
+def pprint(matrix):
+    """Pretty print a list of lists
+    from: https://stackoverflow.com/questions/13214809/pretty-print-2d-list
+    an alternative could be: https://pypi.org/project/tabulate/
+    """
+    s = [[str(e) for e in row] for row in matrix]
+    lens = [max(map(len, col)) for col in zip(*s)]
+    fmt = "\t".join("{{:{}}}".format(x) for x in lens)
+    table = [fmt.format(*row) for row in s]
+    print("\n".join(table))
+
 
 class ColorFormatter(logging.Formatter):
     """Colored logging formatter intended for the console output"""

@@ -9,9 +9,9 @@ Atomic structure with an absorber element
 import numpy as np
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Union, Literal, List
+from typing import Union, List
 from pymatgen.core import Molecule, Structure, Element, Site
-from larixite.utils import fcompact, get_logger
+from larixite.utils import fcompact, get_logger, pprint
 
 TOIMPLEMENT = "To implement in a subclassdepending on the structure file format"
 logger = get_logger("larixite.struct")
@@ -175,7 +175,14 @@ class XasStructure:
             site = sites[0]
             site_index = self.get_idx_in_struct(site.coords)
             site_occupancy = self.get_occupancy(site.species_string)
-            site_tuple = (i, site, site_index, site_occupancy, len(sites), self.wyckoff_symbols[i])
+            site_tuple = (
+                i,
+                site,
+                site_index,
+                site_occupancy,
+                len(sites),
+                self.wyckoff_symbols[i],
+            )
             self.unique_sites.append(site_tuple)
             if absname in site.species_string:
                 self.absorber_sites.append(site_tuple)
@@ -186,3 +193,33 @@ class XasStructure:
             )
             logger.error(errmsg)
             raise AttributeError(errmsg)
+
+    def show_sites(self):
+        """Show a tabular print for self.unique_sites"""
+        header = [
+            "idx",
+            "label",
+            "frac_coords",
+            "idx_in_struct",
+            "occupancy",
+            "cart_coords",
+            "wyckoff_site",
+        ]
+        infos = []
+        for idx, site, site_index, occupancy, len_sites, wyckoff in self.unique_sites:
+            if idx == self.absorber_idx:
+                idx = f"{idx} (abs)"
+            infos.append(
+                [
+                    idx,
+                    site.label,
+                    site.frac_coords,
+                    site_index,
+                    occupancy,
+                    site.coords,
+                    wyckoff,
+                ]
+            )
+        matrix = [header]
+        matrix.extend(infos)
+        pprint(matrix)
