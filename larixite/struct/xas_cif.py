@@ -16,9 +16,9 @@ from larixite.utils import get_logger
 rng = Random()
 logger = get_logger("larixite.struct")
 
+
 @dataclass
 class XasStructureCif(XasStructure):
-
     @property
     def sga(self):
         return SpacegroupAnalyzer(self.struct)
@@ -30,55 +30,15 @@ class XasStructureCif(XasStructure):
     @property
     def sym_struct(self):
         return self.sga.get_symmetrized_structure()
+    
+    @property
+    def wyckoff_symbols(self):
+        return self.sym_struct.wyckoff_symbols
 
     @property
     def equivalent_sites(self):
         return self.sym_struct.equivalent_sites
 
-
-    def build_sites(self):
-        """Parse sites of CIF structure to add the following attributes:
-
-        unique_sites:   list of (site[0], wyckoff sym) for unique xtal sites
-        unique_map:     mapping of all site_labels to unique_site index
-        absorber_sites: list of unique sites with absorber
-
-        """
-        # get equivalent sites, mapping of all sites to unique sites,
-        # and list of site indexes with absorber
-        wyckoff_symbols = self.sym_struct.wyckoff_symbols
-        self.unique_sites = []
-        self.unique_map = {}
-        self.absorber_sites = []
-        absname = self.absorber.symbol
-        for i, sites in enumerate(self.sym_struct.equivalent_sites):
-            self.unique_sites.append((sites[0], len(sites), wyckoff_symbols[i]))
-            for site in sites:
-                self.unique_map[site_label(site)] = i + 1
-            if absname in site.species_string:
-                self.absorber_sites.append(i)
-
-        self.atom_sites = {}
-        self.atom_site_labels = {}
-
-        for i, dat in enumerate(self.unique_sites):
-            site = dat[0]
-            label = site_label(site)
-            for species in site.species:
-                elem = species.name
-                if elem in self.atom_sites:
-                    self.atom_sites[elem].append(i + 1)
-                    self.atom_site_labels[elem].append(label)
-                else:
-                    self.atom_sites[elem] = [i + 1]
-                    self.atom_site_labels[elem] = [label]
-
-        all_sites = {}
-        for xat in self.atom_site_labels.keys():
-            all_sites[xat] = {}
-            for i, label in enumerate(self.atom_site_labels[xat]):
-                all_sites[xat][label] = self.atom_sites[xat][i]
-        self.all_sites = all_sites
 
     def build_cluster(self):
         """Build a cluster around the absorber as pymatgen Molecule"""

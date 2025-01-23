@@ -15,7 +15,6 @@ logger = get_logger("larixite.struct")
 
 @dataclass
 class XasStructureXyz(XasStructure):
-
     @property
     def sga(self):
         raise AttributeError("SpacegroupAnalyzer fails for XYZ files")
@@ -28,6 +27,10 @@ class XasStructureXyz(XasStructure):
     def sym_struct(self):
         """No symmetrized structure for XYZ, simply return the structure"""
         return self.struct
+
+    @property
+    def wyckoff_symbols(self):
+        return ["1a" for site in self.struct.sites]
 
     @property
     def equivalent_sites(self):
