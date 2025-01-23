@@ -45,17 +45,16 @@ def mol2struct(molecule: Molecule) -> Structure:
 def get_structure(
     filepath: Union[str, Path], absorber: str, frame: int = 0
 ) -> XasStructure:
-    """
-    Get a XasStructure from a structural file.
+    """Get a subclass of XasStructure from a structural file, according to its format
 
     Parameters
     ----------
     filepath : str or Path
-        Filepath to CIF/XYZ file.
+        Filepath to CIF/XYZ file
     absorber : str
-        Atomic symbol of the absorbing element.
+        Atomic symbol of the absorbing element
     frame : int, optional
-        Index of the structure in the CIF/XYZ file.
+        Index of the structure for multi-frame structures in the CIF/XYZ file
 
     Returns
     -------
@@ -79,13 +78,11 @@ def get_structure(
         except Exception:
             raise ValueError(f"could not get structure {frame} from text of CIF")
         mol = Molecule.from_dict(struct.as_dict())
-        file_format = "cif"
         logger.debug("structure created from a CIF file")
         return XasStructureCif(
             name=filepath.name,
             label=filepath.stem,
             filepath=filepath,
-            file_format=file_format,
             struct=struct,
             molecule=mol,
             absorber=Element(absorber),
@@ -97,19 +94,16 @@ def get_structure(
         molecules = xyz.all_molecules
         mol = molecules[frame]
         struct = mol2struct(mol)
-        file_format = "xyz"
         logger.debug("structure created from a XYZ file")
         return XasStructureXyz(
             name=filepath.name,
             label=filepath.stem,
             filepath=filepath,
-            file_format=file_format,
             struct=struct,
             molecule=mol,
             absorber=Element(absorber),
             absorber_idx=None,
         )
-
     #: UNSUPPORTED
     raise ValueError(f"File type {filepath.suffix} not supported yet")
 
