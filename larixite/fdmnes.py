@@ -11,7 +11,7 @@ spectroscopy (XAS, XES, RIXS) from the atomic structures
 """
 
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Literal
 from pathlib import Path
 from pymatgen.core import __version__ as pymatgen_version, Element
 from larixite.struct import get_structure
@@ -22,6 +22,7 @@ from larixite.version import __version__ as larixite_version
 logger = get_logger("larixite.fdmnes")
 
 TEMPLATE_FOLDER = Path(Path(__file__).parent, "templates")
+LiteralStructTypes = Literal[("crystal",)]  #TODO "molecule", "cif_file"]
 
 FDMNES_DEFAULT_PARAMS = {
     "Energpho": False,
@@ -150,10 +151,51 @@ class FdmnesXasInput:
 
         return params
 
-    def build_structure(self):
-        pass
+    def get_structure(self, struct_type: str = "crystal") -> str:
+        """Get the structure section of the input
+        
+        Parameters
+        ------------
 
-    def get_input(self, comment: str = "") -> str:
+        struct_type: str
+            type of the structure -> see Notes
+
+
+        Notes
+        -----
+
+        FDMNES supports various structure types:
+            - Crystal
+            - Molecule
+            - Film
+            - Surface
+            - Interface
+            - Pdb_file
+            - Film_Pdb_file
+            - Cif_file
+            - Film_Cif_file
+
+        """
+        structout = [f"!<structure description: {struct_type}>"]
+        if "crys" in struct_type.lower():
+            structout.append("Spgroup")
+            structout.append(f"   {self.xs.space_group}")
+            structout.append("Occupancy")
+            structout.append("Crystal")
+            lattice = self.xs.sym_struct.lattice
+            structout.append(f"   {lattice.a} {lattice.b} {lattice.c} {lattice.alpha} {lattice.beta} {lattice.gamma}")
+            for idx, site, site_index, occupancy, len_sites, wyckoff in self.xs.unique_sites:
+                elem = site.specie
+                sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy} !{site.label:>4s} {wyckoff}"
+                structout.append(sitestr)
+        else:
+            errmsg = f"Structure type `{struct_type}` not supported"
+            logger.error(errmsg)
+            raise AttributeError(errmsg)
+        structout.append("!</structure description>")
+        return "\n".join(structout)
+
+    def get_input(self, comment: str = "", struct_type: str = "crystal") -> str:
         params = self.params.copy()
         template = open(self.tmplpath, "r").read()
 
@@ -173,14 +215,10 @@ class FdmnesXasInput:
             "edge": self.edge,
             "radius": f"{self.radius:.2f}",
             "erange": self.erange,
+            "structure": self.get_structure(struct_type=struct_type),
         }
 
         for parkey, parval in params.items():
             conf[parkey] = str(parkey) if parval is True else f"! {parkey}"
-
-        conf["absorber"] = self.absorber.symbol
-        conf["absorber_idx"] = self.absorber_idx
-
-        conf["Structure"] = "! TODO"
 
         return strict_ascii(template.format(**conf))
