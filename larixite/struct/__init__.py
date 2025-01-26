@@ -74,7 +74,7 @@ def get_structure(
         except Exception:
             raise ValueError(f"could not parse text of CIF from {filepath}")
         try:
-            struct = structs.parse_structures()[frame]
+            struct = structs.parse_structures(primitive=False)[frame]
         except Exception:
             raise ValueError(f"could not get structure {frame} from text of CIF")
         mol = Molecule.from_dict(struct.as_dict())
