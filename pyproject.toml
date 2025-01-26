@@ -49,5 +49,5 @@ Tracker = "https://github.com/xraypy/larixite/issues"
 web = ["flask"]
 test = ["pytest"]
 doc = ["sphinx"]
-dev = ["build", "twine"]
+dev = ["build", "twine", "ruff"]
 all = ["larixite[dev,web,test,doc]"]
