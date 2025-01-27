@@ -185,14 +185,14 @@ class FdmnesXasInput:
             lattice = self.xs.sym_struct.lattice
             structout.append(f"   {lattice.a} {lattice.b} {lattice.c} {lattice.alpha} {lattice.beta} {lattice.gamma}")
             for idx, site, site_index, occupancy, len_sites, wyckoff in self.xs.unique_sites:
-                zelems = [el.Z for el in site.species.elements]
-                elem = site.species.elements[0]
+                zelems = [elem.Z for elem in site.species.elements]
                 if not len(set(zelems)) == 1:
                     logger.warning(
-                        f"Site {site_index} has species with different Z: {site.species_string} -> using first element ({elem.name})"
+                        f"Site {idx} has species with different Z: {site.species_string})"
                     )
-                sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.2f} !{site.label:>4s} {wyckoff}"
-                structout.append(sitestr)
+                for elem, elstr in zip(site.species.elements, site.species_string.split(', ')):
+                    sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.2f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
+                    structout.append(sitestr)
         else:
             errmsg = f"Structure type `{struct_type}` not supported"
             logger.error(errmsg)
