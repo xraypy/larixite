@@ -130,7 +130,7 @@ class FdmnesXasInput:
     def get_opt_params(self) -> dict:
         """Optimize the input parameters"""
         params = self.params.copy()
-        atoms_z = [species.Z for species in self.xs.struct.species]
+        atoms_z = [species.Z for species in self.xs.struct.types_of_species]
         abs_z = self.absorber.Z
         transition_metals = [range(21, 31), range(39, 49), range(57, 81)]
 
