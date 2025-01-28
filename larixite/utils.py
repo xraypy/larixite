@@ -65,6 +65,7 @@ def fcompact(val):
         val = val + "0"
     return val
 
+
 def pprint(matrix):
     """Pretty print a list of lists
     from: https://stackoverflow.com/questions/13214809/pretty-print-2d-list

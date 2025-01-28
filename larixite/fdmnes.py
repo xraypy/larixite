@@ -41,7 +41,7 @@ FDMNES_DEFAULT_PARAMS = {
     "Full_atom": False,
     "TDDFT": False,
     "PBE96": False,
-    "Atom": False,
+    "Atom_conf": False,  #: preferred over `Atom` -> TODO
     "COOP": False,
     "Convolution": True,
 }
@@ -49,7 +49,7 @@ FDMNES_DEFAULT_PARAMS = {
 
 @dataclass
 class FdmnesXasInput:
-    """ "Input parameters for FDMNES"""
+    """Input generator for a XAS calculation with FDMNES"""
 
     structpath: Union[
         str, Path, XasStructure
@@ -91,7 +91,7 @@ class FdmnesXasInput:
 
         if self.params is None:
             self.params = FDMNES_DEFAULT_PARAMS
-            self.params = self.get_opt_params()
+            self.params = self.optimize_params()
 
     def validate_edge(self):
         """Validates and adjusts the edge attribute"""
@@ -122,13 +122,16 @@ class FdmnesXasInput:
         if self.edge == "L":
             self.edge = "L23"
             logger.warning("Edge 'L' changed to 'L23'")
+        if self.edge == "M":
+            self.edge = "M45"
+            logger.warning("Edge 'M' changed to 'M45'")
         if self.edge not in valid_edges:
             bad_edge = self.edge
             self.edge = "K" if self.absorber.Z < 58 else "L"
             logger.error(f"Edge {bad_edge} not valid -> changed to {self.edge}")
 
-    def get_opt_params(self) -> dict:
-        """Optimize the input parameters"""
+    def optimize_params(self) -> dict:
+        """Optimize the given input parameters"""
         params = self.params.copy()
         atoms_z = [species.Z for species in self.xs.struct.types_of_species]
         abs_z = self.absorber.Z
@@ -145,6 +148,7 @@ class FdmnesXasInput:
 
         if any(z > 50 for z in atoms_z):
             params["Spinorbit"] = True
+            logger.info("Spinorbit enabled. **NOTE**: the simulations are typically 4 to 8 times longer and need 2 times more memory space")
 
         if 8 in atoms_z:
             params["Full_atom"] = True
@@ -176,7 +180,7 @@ class FdmnesXasInput:
             - Film_Cif_file
 
         """
-        structout = [f"!<structure description: {struct_type}>"]
+        structout = [f"!<structure description start: {struct_type}>"]
         if "crys" in struct_type.lower():
             structout.append("Spgroup")
             structout.append(f"   {self.xs.space_group}")
@@ -197,7 +201,7 @@ class FdmnesXasInput:
             errmsg = f"Structure type `{struct_type}` not supported"
             logger.error(errmsg)
             raise AttributeError(errmsg)
-        structout.append("!</structure description>")
+        structout.append("!</structure description end>")
         return "\n".join(structout)
 
     def get_input(self, comment: str = "", struct_type: str = "crystal") -> str:
