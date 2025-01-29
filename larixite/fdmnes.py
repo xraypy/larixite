@@ -37,7 +37,6 @@ FDMNES_DEFAULT_PARAMS = {
     "SCFexc": False,
     "SCFexcv": False,
     "Screening": False,
-    "Vmax": False,
     "Full_atom": False,
     "TDDFT": False,
     "PBE96": False,
@@ -63,6 +62,8 @@ class FdmnesXasInput:
     frame: int = 0  #: index of the frame inside the structure
     edge: Union[str, None] = None  #: edge for calculation
     radius: float = 7  #: radius of the calulation
+    struct_type: str = "crystal"  #: type of the structure
+    vmax: Union[float, None] = None  #: maximum potential value for molecules
     erange: Union[str, None] = "-30.0 0.1 70.0 1.0 100"  #: energy range
     tmplpath: Union[str, Path, None] = None  #: path to the FDMNES input template
     params: Union[dict, None] = None  #: parameters for FDMNES
@@ -155,33 +156,40 @@ class FdmnesXasInput:
         if 8 in atoms_z:
             params["Full_atom"] = True
 
+        if "mol" in self.struct_type.lower():
+            self.vmax = -6
+
         return params
 
-    def get_structure(self, struct_type: str = "crystal") -> str:
+    def get_structure(self, struct_type: Union[str, None] = None) -> str:
         """Get the structure section of the input
 
         Parameters
         ------------
 
-        struct_type: str
+        struct_type: None | str [None -> self.struct_type]
             type of the structure -> see Notes
-
 
         Notes
         -----
 
         FDMNES supports various structure types:
-            - Crystal
-            - Molecule
-            - Film
-            - Surface
-            - Interface
-            - Pdb_file
-            - Film_Pdb_file
-            - Cif_file
-            - Film_Cif_file
+            - Crystal  -> Implemented (default)
+            - Molecule -> TODO
+            - Film  -> Not implemented yet
+            - Surface  -> Not implemented yet
+            - Interface  -> Not implemented yet
+            - Pdb_file  -> Not implemented yet
+            - Film_Pdb_file  -> Not implemented yet
+            - Cif_file  -> TODO
+            - Film_Cif_file  -> Not implemented yet
 
         """
+        if struct_type is not None:
+            self.struct_type = struct_type
+            self.optimize_params()
+        else:
+            struct_type = self.struct_type
         structout = [f"!<structure description start: {struct_type}>"]
         if "crys" in struct_type.lower():
             structout.append("Spgroup")
@@ -216,16 +224,25 @@ class FdmnesXasInput:
             raise AttributeError(errmsg)
         structout.append("!</structure description end>")
         return "\n".join(structout)
-    
+
     def get_atbsorber(self) -> str:
         """Get the absorber section of the input
-        
+
         TODO:
         - add the possibility to use the `Absorber` (number of atom/s in the list of atoms) card instead of `Z_absorber`
-        """	
+        """
         absout = ["Z_absorber"]
         absout.append(f"   {self.absorber.Z}")
         return "\n".join(absout)
+
+    def get_vmax(self) -> str:
+        """Get the vmax section of the input"""
+        if self.vmax is not None:
+            vmax = ["Vmax"]
+            vmax.append("   -6")
+            return "\n".join(vmax)
+        else:
+            return "! Vmax"
 
     def get_input(self, comment: str = "", struct_type: str = "crystal") -> str:
         params = self.params.copy()
@@ -247,10 +264,10 @@ class FdmnesXasInput:
             "edge": self.edge,
             "radius": f"{self.radius:.2f}",
             "erange": self.erange,
+            "vmax": self.get_vmax(),
             "absorber": self.get_atbsorber(),
             "structure": self.get_structure(struct_type=struct_type),
         }
-
         for parkey, parval in params.items():
             conf[parkey] = str(parkey) if parval is True else f"! {parkey}"
 
