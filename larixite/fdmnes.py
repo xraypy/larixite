@@ -22,7 +22,7 @@ from larixite.version import __version__ as larixite_version
 logger = get_logger("larixite.fdmnes")
 
 TEMPLATE_FOLDER = Path(Path(__file__).parent, "templates")
-LiteralStructTypes = Literal[("crystal",)]  #TODO "molecule", "cif_file"]
+LiteralStructTypes = Literal[("crystal",)]  # TODO "molecule", "cif_file"]
 
 FDMNES_DEFAULT_PARAMS = {
     "Energpho": False,
@@ -41,7 +41,7 @@ FDMNES_DEFAULT_PARAMS = {
     "Full_atom": False,
     "TDDFT": False,
     "PBE96": False,
-    "Atom_conf": False,  #: preferred over `Atom` -> TODO
+    "Atom_conf": False,  #: preferred over `Atom` (permits to keep atomic number in the list of atoms) -> TODO
     "COOP": False,
     "Convolution": True,
 }
@@ -57,9 +57,9 @@ class FdmnesXasInput:
     absorber: Union[
         str, int, Element
     ]  #: atomic symbol or number of the absorbing element
-    absorber_idx: Union[int, None] = (
-        None  #: index of the absorbing atom in the pymatgen structure
-    )
+    absorber_idx: Union[
+        int, None
+    ] = None  #: index of the absorbing atom in the pymatgen structure
     frame: int = 0  #: index of the frame inside the structure
     edge: Union[str, None] = None  #: edge for calculation
     radius: float = 7  #: radius of the calulation
@@ -148,7 +148,9 @@ class FdmnesXasInput:
 
         if any(z > 50 for z in atoms_z):
             params["Spinorbit"] = True
-            logger.info("Spinorbit enabled. **NOTE**: the simulations are typically 4 to 8 times longer and need 2 times more memory space")
+            logger.info(
+                "Spinorbit enabled. **NOTE**: the simulations are typically 4 to 8 times longer and need 2 times more memory space"
+            )
 
         if 8 in atoms_z:
             params["Full_atom"] = True
@@ -157,7 +159,7 @@ class FdmnesXasInput:
 
     def get_structure(self, struct_type: str = "crystal") -> str:
         """Get the structure section of the input
-        
+
         Parameters
         ------------
 
@@ -187,14 +189,25 @@ class FdmnesXasInput:
             structout.append("Occupancy")
             structout.append("Crystal")
             lattice = self.xs.sym_struct.lattice
-            structout.append(f"   {lattice.a} {lattice.b} {lattice.c} {lattice.alpha} {lattice.beta} {lattice.gamma}")
-            for idx, site, site_index, occupancy, len_sites, wyckoff in self.xs.unique_sites:
+            structout.append(
+                f"   {lattice.a} {lattice.b} {lattice.c} {lattice.alpha} {lattice.beta} {lattice.gamma}"
+            )
+            for (
+                idx,
+                site,
+                site_index,
+                occupancy,
+                len_sites,
+                wyckoff,
+            ) in self.xs.unique_sites:
                 zelems = [elem.Z for elem in site.species.elements]
                 if not len(set(zelems)) == 1:
                     logger.warning(
                         f"Site {idx} has species with different Z: {site.species_string})"
                     )
-                for elem, elstr in zip(site.species.elements, site.species_string.split(', ')):
+                for elem, elstr in zip(
+                    site.species.elements, site.species_string.split(", ")
+                ):
                     sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.2f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
                     structout.append(sitestr)
         else:
@@ -203,6 +216,16 @@ class FdmnesXasInput:
             raise AttributeError(errmsg)
         structout.append("!</structure description end>")
         return "\n".join(structout)
+    
+    def get_atbsorber(self) -> str:
+        """Get the absorber section of the input
+        
+        TODO:
+        - add the possibility to use the `Absorber` (number of atom/s in the list of atoms) card instead of `Z_absorber`
+        """	
+        absout = ["Z_absorber"]
+        absout.append(f"   {self.absorber.Z}")
+        return "\n".join(absout)
 
     def get_input(self, comment: str = "", struct_type: str = "crystal") -> str:
         params = self.params.copy()
@@ -224,6 +247,7 @@ class FdmnesXasInput:
             "edge": self.edge,
             "radius": f"{self.radius:.2f}",
             "erange": self.erange,
+            "absorber": self.get_atbsorber(),
             "structure": self.get_structure(struct_type=struct_type),
         }
 
