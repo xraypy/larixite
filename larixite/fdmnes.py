@@ -29,7 +29,7 @@ FDMNES_DEFAULT_PARAMS = {
     "Quadrupole": False,
     "Density": False,
     "Density_all": False,
-    "SCF": True,
+    "SCF": False,
     "Green": True,
     "Memory_save": True,
     "Relativism": False,
