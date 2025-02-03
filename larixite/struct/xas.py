@@ -13,7 +13,7 @@ from typing import Union, List
 from pymatgen.core import Molecule, Structure, Element, Site
 from larixite.utils import fcompact, get_logger, pprint
 
-TOIMPLEMENT = "To implement in a subclassdepending on the structure file format"
+TOIMPLEMENT = "To implement as subclass, depending on the structure file format"
 logger = get_logger("larixite.struct")
 
 
@@ -42,8 +42,8 @@ class XasStructure:
 
         This class is agnostic of the file format for the atomic structure.
         Specific handling for different formats should be implemented in
-        subclasses. The goal of this clss is to provide a common API
-        for working with atomic structures and absorbers.
+        subclasses. The goal of this class is to provide a common API
+        for manipulating atomic structures with an absorber element.
 
     """
 
@@ -55,6 +55,7 @@ class XasStructure:
     absorber: Element  #: pymatgen Element for the absorber
     absorber_idx: Union[int, None] = None  #: site index for the absorber
     radius: float = 7  #: radius of the absorption sphere from the absorbing atom
+    radius_ext: float = 2.5  #: radius extension of the absorption sphere => cluster_size = radius + radius_ext
 
     def __post_init__(self):
         if self.absorber_idx is None:
@@ -63,12 +64,12 @@ class XasStructure:
 
     @property
     def cluster_size(self):
-        """The size of the cluster is 2.5 Angstrom larger than the radius"""
-        return self.radius + 2.5
+        """The size of the cluster is larger than the radius"""
+        return self.radius + self.radius_ext
 
     @cluster_size.setter
     def cluster_size(self, value: float):
-        self.radius = value - 2.5
+        self.radius = value - self.radius_ext
 
     @property
     def site_labels(self):
