@@ -11,8 +11,12 @@ def test_fdmnes():
 
     for cifid, atoms in cifids.items():
         cif = db.get_cif(cifid)
-        for absorber in atoms:
-            pass
+        outfile = cif.to_file(verbose=True)
+        for abs in atoms:
+            sg = get_structure(outfile, abs)
+            f = FdmnesXasInput(sg, absorber=abs)
+            text = f.get_input()
+            assert len(text) > 1000
 
 
 if __name__ == "__main__":
