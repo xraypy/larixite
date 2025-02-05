@@ -388,8 +388,8 @@ class CifStructure():
         firstauthor = self.publication.authors[0].split(' ')[0]
         return f"{formula_title}_{minname}_{firstauthor}{self.publication.year}_AMCSD{self.ams_id}"
 
-    def to_file(self, outdir: Union[None, str, Path] = None) -> None:
-        """Writes ciftext to a file"""
+    def to_file(self, outdir: Union[None, str, Path] = None, verbose: bool = False) -> Path:
+        """Writes ciftext to a file and returns the Path to the file"""
         if outdir is None:
             import tempfile
             outdir = Path(tempfile.gettempdir()) / "larixite"
@@ -399,7 +399,9 @@ class CifStructure():
         outfile = outdir / f"{self.label}.cif"
         with outfile.open("w") as f:
             f.write(self.ciftext)
-        print(f"CIF written to {outfile}")
+        if verbose:
+            print(f"CIF written to {outfile}")
+        return outfile
 
     def find_hkls(self, nmax=64, qmax=10, wavelength=0.75):
         """find the HKLs and degeneracies of the strongest reflections
