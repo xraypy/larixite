@@ -30,7 +30,8 @@ from io import StringIO
 from string import ascii_letters
 from base64 import b64encode, b64decode
 from collections import namedtuple
-
+from typing import Union
+from pathlib import Path
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import atexit
@@ -375,6 +376,30 @@ class CifStructure():
         self._ciftext = '\n'.join(out)
         return self.ciftext
 
+    @property
+    def label(self):
+        if "missing" in self.formula_title:
+            formula_title = self.formula.replace(" ", "")
+        else:
+            formula_title = self.formula_title
+        minname = self.get_mineralname().lower()
+        if "missing" in minname:
+            minname = ""
+        firstauthor = self.publication.authors[0].split(' ')[0]
+        return f"{formula_title}_{minname}_{firstauthor}{self.publication.year}_AMCSD{self.ams_id}"
+
+    def to_file(self, outdir: Union[None, str, Path] = None) -> None:
+        """Writes ciftext to a file"""
+        if outdir is None:
+            import tempfile
+            outdir = Path(tempfile.gettempdir()) / "larixite"
+        if not isinstance(outdir, Path):
+            outdir = Path(outdir)
+        outdir.mkdir(exist_ok=True)
+        outfile = outdir / f"{self.label}.cif"
+        with outfile.open("w") as f:
+            f.write(self.ciftext)
+        print(f"CIF written to {outfile}")
 
     def find_hkls(self, nmax=64, qmax=10, wavelength=0.75):
         """find the HKLs and degeneracies of the strongest reflections
