@@ -146,8 +146,8 @@ class XasStructure:
                 occupancy = self.get_occupancy(site.species_string)
                 site_index = self.get_idx_in_struct(site.coords)
                 if occupancy != 1:
-                    logger.warning(
-                        f"{self.name}: absorber {self.absorber.symbol} has occupancy of {occupancy} on site {site_index}"
+                    logger.info(
+                        f"[{self.label}] absorber {self.absorber.symbol} has occupancy of {occupancy} on site {site_index}"
                     )
                 absorber_indexes.append(site_index)
         if len(absorber_indexes) == 0:

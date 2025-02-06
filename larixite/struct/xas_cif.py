@@ -30,7 +30,7 @@ class XasStructureCif(XasStructure):
     @property
     def sym_struct(self):
         return self.sga.get_symmetrized_structure()
-    
+
     @property
     def wyckoff_symbols(self):
         return self.sym_struct.wyckoff_symbols
@@ -38,7 +38,6 @@ class XasStructureCif(XasStructure):
     @property
     def equivalent_sites(self):
         return self.sym_struct.equivalent_sites
-
 
     def build_cluster(self):
         """Build a cluster around the absorber as pymatgen Molecule"""
