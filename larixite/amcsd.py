@@ -388,7 +388,7 @@ class CifStructure():
         firstauthor = self.publication.authors[0].split(' ')[0]
         return f"{formula_title}_{minname}_{firstauthor}{self.publication.year}_AMCSD{self.ams_id}"
 
-    def to_file(self, outdir: Union[None, str, Path] = None, verbose: bool = False) -> Path:
+    def write_cif(self, outdir: Union[None, str, Path] = None, verbose: bool = False) -> Path:
         """Writes ciftext to a file and returns the Path to the file"""
         if outdir is None:
             import tempfile

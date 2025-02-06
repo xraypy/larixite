@@ -11,7 +11,7 @@ def test_fdmnes():
 
     for cifid, atoms in cifids.items():
         cif = db.get_cif(cifid)
-        outfile = cif.to_file(verbose=True)
+        outfile = cif.write_cif(verbose=True)
         for abs in atoms:
             sg = get_structure(outfile, abs)
             f = FdmnesXasInput(sg, absorber=abs)
