@@ -272,3 +272,27 @@ class FdmnesXasInput:
             conf[parkey] = str(parkey) if parval is True else f"! {parkey}"
 
         return strict_ascii(template.format(**conf))
+
+    def write_input(
+        self, inputtext: Union[str, None] = None, outdir: Union[str, Path, None] = None
+    ) -> None:
+        """Write the FDMNES input text to disk."""
+        if inputtext is None:
+            inputtext = self.get_input()
+        if outdir is None:
+            import tempfile
+
+            outdir = (
+                Path(tempfile.gettempdir()) / "larixite" / "fdmnes" / str(self.xs.name)
+            )
+            outdir = tempfile.mkdtemp(dir=outdir, prefix="job_")
+        if isinstance(outdir, str):
+            outdir = Path(outdir)
+        outdir.mkdir(parents=True, exist_ok=True)
+        fnout = outdir / "job_inp.txt"
+        with open(fnout, "w") as fp:
+            fp.write(inputtext)
+        with open(outdir / "fdmfile.txt", "w") as fp:
+            fp.write("1\njob_inp.txt")
+        logger.info(f"written `{fnout}`")
+        return
