@@ -42,7 +42,7 @@ def read_cif_structure(ciftext: str) -> Structure:
         raise ValueError('could not parse text of CIF')
 
     try:
-        cstruct = cifstructs.parse_structures()[0]
+        cstruct = cifstructs.parse_structures(primitive=False)[0]
     except Exception:
         raise ValueError('could not get structure from text of CIF')
     return cstruct
