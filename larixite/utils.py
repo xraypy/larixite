@@ -87,7 +87,7 @@ class ColorFormatter(logging.Formatter):
     bold_red = "\x1b[31;1m"
     green = "\x1b[32;21m"
     reset = "\x1b[0m"
-    format = "[%(name)-s | %(levelname)-8s] %(message)s"  #: '%(asctime)s' redundant
+    format = "[%(name)-15s | %(levelname)-8s] %(message)s"  #: '%(asctime)s' redundant
 
     FORMATS = {
         logging.DEBUG: grey + format + reset,
