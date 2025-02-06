@@ -211,7 +211,7 @@ class FdmnesXasInput:
                 zelems = [elem.Z for elem in site.species.elements]
                 if not len(set(zelems)) == 1:
                     logger.warning(
-                        f"Site {idx} has species with different Z: {site.species_string})"
+                        f"[{self.xs.label}] site {idx} has species with different Z -> {site.species_string}"
                     )
                 for elem, elstr in zip(
                     site.species.elements, site.species_string.split(", ")
