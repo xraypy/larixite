@@ -29,7 +29,8 @@ if logger.level != 10:
 def mol2struct(molecule: Molecule) -> Structure:
     """Convert a pymatgen Molecule to Structure"""
     # extend the lattice
-    alat, blat, clat = np.max(molecule.cart_coords, axis=0)
+    # alat, blat, clat = np.max(molecule.cart_coords, axis=0)
+    alat, blat, clat = 1.0, 1.0, 1.0
     lattice = Lattice.from_parameters(
         a=alat, b=blat, c=clat, alpha=90, beta=90, gamma=90
     )
@@ -85,6 +86,7 @@ def get_structure(
             filepath=filepath,
             struct=struct,
             molecule=mol,
+            struct_type="crystal",
             absorber=Element(absorber),
             absorber_idx=None,
         )
@@ -101,6 +103,7 @@ def get_structure(
             filepath=filepath,
             struct=struct,
             molecule=mol,
+            struct_type="molecule",
             absorber=Element(absorber),
             absorber_idx=None,
         )

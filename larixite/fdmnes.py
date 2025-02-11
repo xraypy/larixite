@@ -62,19 +62,20 @@ class FdmnesXasInput:
     frame: int = 0  #: index of the frame inside the structure
     edge: Union[str, None] = None  #: edge for calculation
     radius: float = 7  #: radius of the calulation
-    struct_type: str = "crystal"  #: type of the structure
+    struct_type: Union[str, None] = None  #: type of the structure
     vmax: Union[float, None] = None  #: maximum potential value for molecules
-    erange: Union[str, None] = "-30.0 0.1 70.0 1.0 100"  #: energy range
+    erange: Union[str, None] = "-20.0 0.1 70.0 1.0 100.0"  #: energy range
     tmplpath: Union[str, Path, None] = None  #: path to the FDMNES input template
     params: Union[dict, None] = None  #: parameters for FDMNES
 
     def __post_init__(self):
         """Validate and adjust attributes"""
+        #: absorber
         if isinstance(self.absorber, str):
             self.absorber = Element(self.absorber)
         elif isinstance(self.absorber, int):
             self.absorber = Element.from_Z(self.absorber)
-
+        #: init structure object and type
         if isinstance(self.structpath, str):
             self.structpath = Path(self.structpath)
         if isinstance(self.structpath, XasStructure):
@@ -82,14 +83,16 @@ class FdmnesXasInput:
             self.structpath = self.xs.filepath
         else:
             self.xs = get_structure(self.structpath, absorber=self.absorber)
-
+        if self.struct_type is None:
+            self.struct_type = self.xs.struct_type
+        #: template
         if self.tmplpath is None:
             self.tmplpath = Path(TEMPLATE_FOLDER, "fdmnes_xas.tmpl")
         if isinstance(self.tmplpath, str):
             self.tmplpath = Path(self.tmplpath)
-
+        #: absorption edge
         self.validate_edge()
-
+        #: optimize params
         if self.params is None:
             self.params = FDMNES_DEFAULT_PARAMS
             self.params = self.optimize_params()
@@ -190,6 +193,7 @@ class FdmnesXasInput:
             self.optimize_params()
         else:
             struct_type = self.struct_type
+        logger.debug(f"Generating structure section for {struct_type}")
         structout = [f"!<structure description start: {struct_type}>"]
         if "crys" in struct_type.lower():
             structout.append("Spgroup")
@@ -200,6 +204,27 @@ class FdmnesXasInput:
             structout.append(
                 f"   {lattice.a} {lattice.b} {lattice.c} {lattice.alpha} {lattice.beta} {lattice.gamma}"
             )
+            for (
+                idx,
+                site,
+                site_index,
+                occupancy,
+                len_sites,
+                wyckoff,
+            ) in self.xs.unique_sites:
+                zelems = [elem.Z for elem in site.species.elements]
+                if not len(set(zelems)) == 1:
+                    logger.warning(
+                        f"[{self.xs.label}] site {idx} has species with different Z -> {site.species_string}"
+                    )
+                for elem, elstr in zip(
+                    site.species.elements, site.species_string.split(", ")
+                ):
+                    sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.2f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
+                    structout.append(sitestr)
+        elif "mol" in struct_type.lower():
+            structout.append("Molecule")
+            structout.append("   1.0 1.0 1.0 90.0 90.0 90.0")
             for (
                 idx,
                 site,
@@ -244,7 +269,7 @@ class FdmnesXasInput:
         else:
             return "! Vmax"
 
-    def get_input(self, comment: str = "", struct_type: str = "crystal") -> str:
+    def get_input(self, comment: str = "", struct_type: str = None) -> str:
         params = self.params.copy()
         template = open(self.tmplpath, "r").read()
 

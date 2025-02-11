@@ -9,7 +9,7 @@ Atomic structure with an absorber element
 import numpy as np
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Union, List
+from typing import Union, List, Literal
 from pymatgen.core import Molecule, Structure, Element, Site
 from larixite.utils import fcompact, get_logger, pprint
 
@@ -56,6 +56,7 @@ class XasStructure:
     absorber_idx: Union[int, None] = None  #: site index for the absorber
     radius: float = 7  #: radius of the absorption sphere from the absorbing atom
     radius_ext: float = 2.5  #: radius extension of the absorption sphere => cluster_size = radius + radius_ext
+    struct_type: str = Literal["crystal", "molecule"]  #: type of the structure
 
     def __post_init__(self):
         if self.absorber_idx is None:
