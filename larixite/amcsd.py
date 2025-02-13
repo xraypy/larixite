@@ -582,7 +582,7 @@ class CifStructure():
             print(f"{err} parse CIF text for CIF {self.ams_id}")
 
         try:
-            self.pmg_cstruct = pmcif.parse_structures()[0]
+            self.pmg_cstruct = pmcif.parse_structures(primitive=False)[0]
         except:
             print(f"{err} parse structure for CIF {self.ams_id}")
 
