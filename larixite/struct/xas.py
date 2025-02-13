@@ -53,15 +53,41 @@ class XasStructure:
     struct: Structure  #: pymatgen Structure
     molecule: Molecule  #: pymatgen Molecule
     absorber: Element  #: pymatgen Element for the absorber
-    absorber_idx: Union[int, None] = None  #: site index for the absorber
     radius: float = 7  #: radius of the absorption sphere from the absorbing atom
     radius_ext: float = 2.5  #: radius extension of the absorption sphere => cluster_size = radius + radius_ext
     struct_type: str = Literal["crystal", "molecule"]  #: type of the structure
 
     def __post_init__(self):
-        if self.absorber_idx is None:
-            self.absorber_idx = self.get_absorber_indexes()[0]
+        self._absorber_idx = self.get_absorber_indexes()[0]
         self.build_sites()
+
+    @property
+    def absorber_idx(self):
+        assert self._absorber_idx is not None, "Absorber index not set!"
+        return self._absorber_idx
+
+    @absorber_idx.setter
+    def absorber_idx(self, value: int):
+        idxerr = f"Absorber index {value} not valid -> cannot set absorber_idx"
+        try:
+            site = self.get_site(value)
+        except IndexError:
+            logger.error(idxerr)
+            raise IndexError(idxerr)
+        #: check absorber symbol is on selected site
+        if self.absorber.symbol not in site.species_string:
+            errmsg = f"Absorber {self.absorber.symbol} not in site {site.species_string} -> cannot set absorber_idx"
+            logger.error(errmsg)
+            raise IndexError(errmsg)
+        idx_in_struct = self.get_absorber_indexes()
+        if value in idx_in_struct:
+            self._absorber_idx = value
+        else:
+            try:
+                self._absorber_idx = self.get_absorber_indexes()[value]
+            except IndexError:
+                logger.error(idxerr)
+                raise IndexError(idxerr)
 
     @property
     def cluster_size(self):
@@ -147,7 +173,7 @@ class XasStructure:
                 occupancy = self.get_occupancy(site.species_string)
                 site_index = self.get_idx_in_struct(site.coords)
                 if occupancy != 1:
-                    logger.info(
+                    logger.debug(
                         f"[{self.label}] absorber {self.absorber.symbol} has occupancy of {occupancy} on site {site_index}"
                     )
                 absorber_indexes.append(site_index)
@@ -196,27 +222,27 @@ class XasStructure:
             logger.error(errmsg)
             raise AttributeError(errmsg)
 
-    def show_sites(self):
+    def show_unique_sites(self):
         """Show a tabular print for self.unique_sites"""
         header = [
-            "idx",
+            "iunique",
+            "istruct",
             "label",
             "frac_coords",
-            "idx_in_struct",
             "occupancy",
             "cart_coords",
             "wyckoff_site",
         ]
         infos = []
-        for idx, site, site_index, occupancy, len_sites, wyckoff in self.unique_sites:
-            if idx == self.absorber_idx:
+        for idx, site, istruct, occupancy, len_sites, wyckoff in self.unique_sites:
+            if istruct == self.absorber_idx:
                 idx = f"{idx} (abs)"
             infos.append(
                 [
                     idx,
+                    istruct,
                     site.label,
                     site.frac_coords,
-                    site_index,
                     occupancy,
                     site.coords,
                     wyckoff,
@@ -224,4 +250,5 @@ class XasStructure:
             )
         matrix = [header]
         matrix.extend(infos)
+        print(f"Unique sites for {self.name}")
         pprint(matrix)

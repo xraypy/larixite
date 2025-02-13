@@ -50,15 +50,8 @@ FDMNES_DEFAULT_PARAMS = {
 class FdmnesXasInput:
     """Input generator for a XAS calculation with FDMNES"""
 
-    structpath: Union[
-        str, Path, XasStructure
-    ]  #: path to the structural file or XasStructure
-    absorber: Union[
-        str, int, Element
-    ]  #: atomic symbol or number of the absorbing element
-    absorber_idx: Union[
-        int, None
-    ] = None  #: index of the absorbing atom in the pymatgen structure
+    structpath: Union[str, Path, XasStructure]  #: path to the structural file or XasStructure
+    absorber: Union[str, int, Element]  #: atomic symbol or number of the absorbing element
     frame: int = 0  #: index of the frame inside the structure
     edge: Union[str, None] = None  #: edge for calculation
     radius: float = 7  #: radius of the calulation

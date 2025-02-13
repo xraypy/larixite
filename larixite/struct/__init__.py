@@ -88,7 +88,6 @@ def get_structure(
             molecule=mol,
             struct_type="crystal",
             absorber=Element(absorber),
-            absorber_idx=None,
         )
     #: XYZ
     if filepath.suffix == ".xyz":
@@ -105,7 +104,6 @@ def get_structure(
             molecule=mol,
             struct_type="molecule",
             absorber=Element(absorber),
-            absorber_idx=None,
         )
     #: UNSUPPORTED
     raise ValueError(f"File type {filepath.suffix} not supported yet")
