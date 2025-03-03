@@ -22,7 +22,6 @@ from larixite.version import __version__ as larixite_version
 logger = get_logger("larixite.fdmnes")
 
 TEMPLATE_FOLDER = Path(Path(__file__).parent, "templates")
-LiteralStructTypes = Literal[("crystal",)]  # TODO "molecule", "cif_file"]
 
 FDMNES_DEFAULT_PARAMS = {
     "Energpho": False,
