@@ -144,15 +144,32 @@ class XasStructure:
     def get_site(self, site_index: int):
         return self.struct[site_index]
 
-    def get_occupancy(self, species_string: str) -> float:
-        """Get the occupancy of the absorbing atom from the species string"""
-        try:
-            ats_occ = species_string.split(",")
-            at_occ = [at for at in ats_occ if self.absorber.name in at][0]
-            occupancy = float(at_occ.split(":")[1])
-        except Exception:
-            occupancy = 1
-        return occupancy
+    def get_occupancy(self, site: Site, elem: Union[Element, None] = None) -> float:
+        """Get the occupancy of a given element on a site
+        
+        Parameters
+        ==========
+
+        site: pymatgen.core.Site object
+        elem: pymatgen.core.Element object or None
+            if None: uses self.absorber
+
+        Returns
+        =======
+
+        occupancy: float
+        """
+        if len(site.species.elements) == 1:
+            return 1
+        zelems = [el.Z for el in site.species.elements]
+        if elem is None:
+            elem = self.absorber
+        if elem.Z not in zelems:
+            logger.debug(f"Element {elem.name} not in site {site}")
+            return 1
+        ats_occ = site.species_string.split(",")
+        at_occ = [at for at in ats_occ if elem.name in at][0]
+        return float(at_occ.split(":")[1])
 
     def get_idx_in_struct(self, atom_coords):
         """Get the index corresponding to the given atomic coordinates (cartesian)"""
@@ -170,7 +187,7 @@ class XasStructure:
         for sites in self.equivalent_sites:
             site = sites[0]
             if self.absorber.symbol in site.species_string:
-                occupancy = self.get_occupancy(site.species_string)
+                occupancy = self.get_occupancy(site)
                 site_index = self.get_idx_in_struct(site.coords)
                 if occupancy != 1:
                     logger.debug(
@@ -193,23 +210,24 @@ class XasStructure:
 
         .. note::
 
-            content of the lists: (i, site, site_index_in_struct, site_occupancy, len(sites), self.wyckoff_symbols[i])
+            content of the lists: (i, site, site_index_in_struct, site_occupancy, len(sites), self.wyckoff_symbols[i], species_string)
 
         """
         self.unique_sites = []
         self.absorber_sites = []
         absname = self.absorber.symbol
-        for i, sites in enumerate(self.equivalent_sites):
+        for idx, sites in enumerate(self.equivalent_sites):
             site = sites[0]
             site_index = self.get_idx_in_struct(site.coords)
-            site_occupancy = self.get_occupancy(site.species_string)
+            site_occupancy = self.get_occupancy(site)
             site_tuple = (
-                i,
+                idx,
                 site,
                 site_index,
                 site_occupancy,
                 len(sites),
-                self.wyckoff_symbols[i],
+                self.wyckoff_symbols[idx],
+                site.species_string,
             )
             self.unique_sites.append(site_tuple)
             if absname in site.species_string:
@@ -229,12 +247,14 @@ class XasStructure:
             "istruct",
             "label",
             "frac_coords",
-            "occupancy",
+            "occu",
             "cart_coords",
-            "wyckoff_site",
+            "nsites",
+            "wyckoff",
+            "species_string",
         ]
         infos = []
-        for idx, site, istruct, occupancy, len_sites, wyckoff in self.unique_sites:
+        for idx, site, istruct, occupancy, len_sites, wyckoff, species_string in self.unique_sites:
             if istruct == self.absorber_idx:
                 idx = f"{idx} (abs)"
             infos.append(
@@ -245,7 +265,9 @@ class XasStructure:
                     site.frac_coords,
                     occupancy,
                     site.coords,
+                    len_sites,
                     wyckoff,
+                    species_string
                 ]
             )
         matrix = [header]
