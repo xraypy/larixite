@@ -1,0 +1,83 @@
+data_global
+_chemical_name_mineral 'Jarosite'
+loop_
+_publ_author_name
+'Basciano L C'
+'Peterson R C'
+_journal_name_full 'American Mineralogist'
+_journal_volume 92
+_journal_year 2007
+_journal_page_first 1464
+_journal_page_last 1473
+_publ_section_title
+;
+ Jarosite - hydronium jarosite solid solution series with
+ full iron occupancy: Mineralogy and crystal chemistry
+ Sample: J
+;
+_database_code_amcsd 4438
+_chemical_compound_source 'Synthetic'
+_chemical_formula_sum 'K.87 H6.13 Fe2.79 S2 O14'
+_cell_length_a 7.3063
+_cell_length_b 7.3063
+_cell_length_c 17.0341
+_cell_angle_alpha 90.0
+_cell_angle_beta 90.0
+_cell_angle_gamma 120.0
+_cell_volume 787.49
+_exptl_crystal_density_diffrn  3.063
+_symmetry_space_group_name_H-M 'R -3 m'
+loop_
+_space_group_symop_operation_xyz
+  'x,y,z'
+  '2/3+x,1/3+y,1/3+z'
+  '1/3+x,2/3+y,2/3+z'
+  'x,x-y,z'
+  '2/3+x,1/3+x-y,1/3+z'
+  '1/3+x,2/3+x-y,2/3+z'
+  'y,x,-z'
+  '2/3+y,1/3+x,1/3-z'
+  '1/3+y,2/3+x,2/3-z'
+  '-x+y,y,z'
+  '2/3-x+y,1/3+y,1/3+z'
+  '1/3-x+y,2/3+y,2/3+z'
+  '-x,-x+y,-z'
+  '2/3-x,1/3-x+y,1/3-z'
+  '1/3-x,2/3-x+y,2/3-z'
+  '-y,-x,z'
+  '2/3-y,1/3-x,1/3+z'
+  '1/3-y,2/3-x,2/3+z'
+  'x-y,-y,-z'
+  '2/3+x-y,1/3-y,1/3-z'
+  '1/3+x-y,2/3-y,2/3-z'
+  'y,-x+y,-z'
+  '2/3+y,1/3-x+y,1/3-z'
+  '1/3+y,2/3-x+y,2/3-z'
+  '-x+y,-x,z'
+  '2/3-x+y,1/3-x,1/3+z'
+  '1/3-x+y,2/3-x,2/3+z'
+  '-x,-y,-z'
+  '2/3-x,1/3-y,1/3-z'
+  '1/3-x,2/3-y,2/3-z'
+  '-y,x-y,z'
+  '2/3-y,1/3+x-y,1/3+z'
+  '1/3-y,2/3+x-y,2/3+z'
+  'x-y,x,-z'
+  '2/3+x-y,1/3+x,1/3-z'
+  '1/3+x-y,2/3+x,2/3-z'
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+_atom_site_U_iso_or_equiv
+K   0.0  0.0  0.0  0.87  0.0304
+H3O   0.0  0.0  0.0  0.13  0.0304
+Fe   0.16667  -0.16667  -0.16667  0.93  0.0342
+S   0.0  0.0  0.3111  1.0  0.02153
+O1   0.0  0.0  0.3966  1.0  0.04433
+O2   0.2227  -0.2227  -0.0568  1.0  0.03166
+O3   0.1278  -0.1278  0.136  1.0  0.0266
+H   0.168  -0.168  0.102  1.0  0.02533
+
