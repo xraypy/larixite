@@ -49,8 +49,12 @@ FDMNES_DEFAULT_PARAMS = {
 class FdmnesXasInput:
     """Input generator for a XAS calculation with FDMNES"""
 
-    structpath: Union[str, Path, XasStructure]  #: path to the structural file or XasStructure
-    absorber: Union[str, int, Element]  #: atomic symbol or number of the absorbing element
+    structpath: Union[
+        str, Path, XasStructure
+    ]  #: path to the structural file or XasStructure
+    absorber: Union[
+        str, int, Element
+    ]  #: atomic symbol or number of the absorbing element
     frame: int = 0  #: index of the frame inside the structure
     edge: Union[str, None] = None  #: edge for calculation
     radius: float = 7  #: radius of the calulation
@@ -203,6 +207,7 @@ class FdmnesXasInput:
                 occupancy,
                 len_sites,
                 wyckoff,
+                species_string,
             ) in self.xs.unique_sites:
                 zelems = [elem.Z for elem in site.species.elements]
                 if not len(set(zelems)) == 1:
@@ -212,7 +217,7 @@ class FdmnesXasInput:
                 for elem, elstr in zip(
                     site.species.elements, site.species_string.split(", ")
                 ):
-                    sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.2f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
+                    sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.3f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
                     structout.append(sitestr)
         elif "mol" in struct_type.lower():
             structout.append("Molecule")
@@ -224,6 +229,7 @@ class FdmnesXasInput:
                 occupancy,
                 len_sites,
                 wyckoff,
+                species_string,
             ) in self.xs.unique_sites:
                 zelems = [elem.Z for elem in site.species.elements]
                 if not len(set(zelems)) == 1:
@@ -233,7 +239,7 @@ class FdmnesXasInput:
                 for elem, elstr in zip(
                     site.species.elements, site.species_string.split(", ")
                 ):
-                    sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.2f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
+                    sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.3f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
                     structout.append(sitestr)
         else:
             errmsg = f"Structure type `{struct_type}` not supported"
