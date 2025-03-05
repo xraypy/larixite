@@ -227,7 +227,6 @@ class XasStructure:
                 site_occupancy,
                 len(sites),
                 self.wyckoff_symbols[idx],
-                site.species_string,
             )
             self.unique_sites.append(site_tuple)
             if absname in site.species_string:
@@ -254,7 +253,7 @@ class XasStructure:
             "species_string",
         ]
         infos = []
-        for idx, site, istruct, occupancy, len_sites, wyckoff, species_string in self.unique_sites:
+        for idx, site, istruct, occupancy, len_sites, wyckoff in self.unique_sites:
             if istruct == self.absorber_idx:
                 idx = f"{idx} (abs)"
             infos.append(
@@ -267,7 +266,7 @@ class XasStructure:
                     site.coords,
                     len_sites,
                     wyckoff,
-                    species_string
+                    site.species_string
                 ]
             )
         matrix = [header]
