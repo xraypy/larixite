@@ -11,7 +11,7 @@ spectroscopy (XAS, XES, RIXS) from the atomic structures
 """
 
 from dataclasses import dataclass
-from typing import Union, Literal
+from typing import Union
 from pathlib import Path
 from pymatgen.core import __version__ as pymatgen_version, Element
 from larixite.struct import get_structure
@@ -60,12 +60,12 @@ class FdmnesXasInput:
     radius: float = 7  #: radius of the calulation
     struct_type: Union[str, None] = None  #: type of the structure
     vmax: Union[float, None] = None  #: maximum potential value for molecules
-    erange: Union[str, None] = "-20.0 0.1 70.0 1.0 100.0"  #: energy range
+    erange: str = "-20.0 0.1 70.0 1.0 100.0"  #: energy range
     tmplpath: Union[str, Path, None] = None  #: path to the FDMNES input template
     params: Union[dict, None] = None  #: parameters for FDMNES
 
     def __post_init__(self):
-        """Validate and adjust attributes"""
+        """Validate and optimize attributes"""
         #: absorber
         if isinstance(self.absorber, str):
             self.absorber = Element(self.absorber)
@@ -213,7 +213,6 @@ class FdmnesXasInput:
                 occupancy,
                 len_sites,
                 wyckoff,
-                species_string,
             ) in self.xs.unique_sites:
                 zelems = [elem.Z for elem in site.species.elements]
                 if not len(set(zelems)) == 1:
@@ -239,7 +238,6 @@ class FdmnesXasInput:
                 occupancy,
                 len_sites,
                 wyckoff,
-                species_string,
             ) in self.xs.unique_sites:
                 zelems = [elem.Z for elem in site.species.elements]
                 if not len(set(zelems)) == 1:
