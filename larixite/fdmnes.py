@@ -180,7 +180,7 @@ class FdmnesXasInput:
             - Interface  -> Not implemented yet
             - Pdb_file  -> Not implemented yet
             - Film_Pdb_file  -> Not implemented yet
-            - Cif_file  -> TODO
+            - Cif_file  -> Not implemented yet
             - Film_Cif_file  -> Not implemented yet
 
         """
@@ -190,11 +190,17 @@ class FdmnesXasInput:
         else:
             struct_type = self.struct_type
         logger.debug(f"Generating structure section for {struct_type}")
-        structout = [f"!<structure description start: {struct_type}>"]
+        structout = []
         if "crys" in struct_type.lower():
+            #: absorber
+            structout.append("Z_absorber")
+            structout.append(f"   {self.absorber.Z}")
+            #: space group
             structout.append("Spgroup")
             structout.append(f"   {self.xs.space_group}")
+            #: occupancy
             structout.append("Occupancy")
+            #: crystal
             structout.append("Crystal")
             lattice = self.xs.sym_struct.lattice
             structout.append(
@@ -220,6 +226,10 @@ class FdmnesXasInput:
                     sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.3f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
                     structout.append(sitestr)
         elif "mol" in struct_type.lower():
+            #: absorber
+            structout.append("Z_absorber")
+            structout.append(f"   {self.absorber.Z}")
+            #: molecule
             structout.append("Molecule")
             structout.append("   1.0 1.0 1.0 90.0 90.0 90.0")
             for (
@@ -245,18 +255,7 @@ class FdmnesXasInput:
             errmsg = f"Structure type `{struct_type}` not supported"
             logger.error(errmsg)
             raise AttributeError(errmsg)
-        structout.append("!</structure description end>")
         return "\n".join(structout)
-
-    def get_atbsorber(self) -> str:
-        """Get the absorber section of the input
-
-        TODO:
-        - add the possibility to use the `Absorber` (number of atom/s in the list of atoms) card instead of `Z_absorber`
-        """
-        absout = ["Z_absorber"]
-        absout.append(f"   {self.absorber.Z}")
-        return "\n".join(absout)
 
     def get_vmax(self) -> str:
         """Get the vmax section of the input"""
@@ -288,7 +287,7 @@ class FdmnesXasInput:
             "radius": f"{self.radius:.2f}",
             "erange": self.erange,
             "vmax": self.get_vmax(),
-            "absorber": self.get_atbsorber(),
+            "struct_type": self.struct_type,
             "structure": self.get_structure(struct_type=struct_type),
         }
         for parkey, parval in params.items():
