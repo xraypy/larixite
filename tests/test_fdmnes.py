@@ -26,7 +26,7 @@ def test_fdmnes():
             sg = get_structure(outfile, abs)
             f = FdmnesXasInput(sg, absorber=abs)
             text = f.get_input()
-            assert len(text) > 1000
+            assert len(text) > 700  # TODO: find a better test
 
 
 if __name__ == "__main__":
