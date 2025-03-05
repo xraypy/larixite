@@ -10,11 +10,13 @@ import numpy as np
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Union, List, Literal
+from random import Random
 from pymatgen.core import Molecule, Structure, Element, Site
 from larixite.utils import fcompact, get_logger, pprint
 
 TOIMPLEMENT = "To implement as subclass, depending on the structure file format"
 logger = get_logger("larixite.struct")
+rng = Random()
 
 
 def site_label(site: Site) -> str:
@@ -117,9 +119,10 @@ class XasStructure:
 
     @property
     def cluster(self):
-        return self.struct.get_sites_in_sphere(
-            self.absorber_site.coords, self.cluster_size
-        )
+        # return self.struct.get_sites_in_sphere(
+        #    self.absorber_site.coords, self.cluster_size
+        # )
+        return self.struct.get_neighbors(self.absorber_site, self.cluster_size)
 
     @property
     def sga(self):
@@ -146,7 +149,7 @@ class XasStructure:
 
     def get_occupancy(self, site: Site, elem: Union[Element, None] = None) -> float:
         """Get the occupancy of a given element on a site
-        
+
         Parameters
         ==========
 
@@ -215,6 +218,7 @@ class XasStructure:
         """
         self.unique_sites = []
         self.absorber_sites = []
+        self.unique_map = {}
         absname = self.absorber.symbol
         for idx, sites in enumerate(self.equivalent_sites):
             site = sites[0]
@@ -229,6 +233,8 @@ class XasStructure:
                 self.wyckoff_symbols[idx],
             )
             self.unique_sites.append(site_tuple)
+            for site in sites:
+                self.unique_map[site_label(site)] = idx + 1
             if absname in site.species_string:
                 self.absorber_sites.append(site_tuple)
 
@@ -238,6 +244,56 @@ class XasStructure:
             )
             logger.error(errmsg)
             raise AttributeError(errmsg)
+
+    def build_cluster(self, radius: Union[float, None] = None):
+        """Build a cluster around the absorber as pymatgen Molecule"""
+        if radius is None:
+            radius = self.cluster_size
+
+        csize2 = radius**2
+
+        cluster = {}
+        site_atoms = {}  # map xtal site with list of atoms occupying that site
+        site_tags = {}
+
+        for i, site in enumerate(self.struct.sites):
+            label = site_label(site)
+            s_unique = self.unique_map.get(label, 0)
+            site_species = [e.symbol for e in site.species]
+            #: handle partial occupancy
+            if len(site_species) > 1:
+                s_els = [s.symbol for s in site.species.keys()]
+
+                s_wts = [s for s in site.species.values()]
+                site_atoms[i] = rng.choices(s_els, weights=s_wts, k=1000)
+                site_tags[i] = f"({site.species_string:s})_{s_unique:d}"
+            else:
+                site_atoms[i] = [site_species[0]] * 1000
+                site_tags[i] = f"{site.species_string:s}_{s_unique:d}"
+
+        # atom0 = self.struct[a_index]
+        atom0 = self.absorber_site
+        sphere = self.struct.get_neighbors(atom0, radius)
+
+        cluster["symbols"] = [self.absorber.symbol]
+        cluster["coords"] = [np.array([0, 0, 0])]
+        site0_species = [e.symbol for e in atom0.species]
+        if len(site0_species) > 1:
+            cluster["tags"] = [f"({atom0.species_string})_{self.absorber_idx:d}"]
+        else:
+            cluster["tags"] = [f"{atom0.species_string}_{self.absorber_idx:d}"]
+
+        for i, site_dist in enumerate(sphere):
+            s_index = site_dist[0].index
+            site_symbol = site_atoms[s_index].pop()
+
+            coords = site_dist[0].coords - atom0.coords
+            if (coords[0] ** 2 + coords[1] ** 2 + coords[2] ** 2) < csize2:
+                cluster["tags"].append(site_tags[s_index])
+                cluster["symbols"].append(site_symbol)
+                cluster["coords"].append(coords)
+
+        return Molecule(cluster["symbols"], cluster["coords"], labels = cluster["tags"])
 
     def show_unique_sites(self):
         """Show a tabular print for self.unique_sites"""
@@ -266,7 +322,7 @@ class XasStructure:
                     site.coords,
                     len_sites,
                     wyckoff,
-                    site.species_string
+                    site.species_string,
                 ]
             )
         matrix = [header]
