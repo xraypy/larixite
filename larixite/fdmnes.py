@@ -57,7 +57,7 @@ class FdmnesXasInput:
     ]  #: atomic symbol or number of the absorbing element
     frame: int = 0  #: index of the frame inside the structure
     edge: Union[str, None] = None  #: edge for calculation
-    radius: float = 7  #: radius of the calulation
+    radius: float = 7  #: radius of the calculation
     struct_type: Union[str, None] = None  #: type of the structure
     vmax: Union[float, None] = None  #: maximum potential value for molecules
     erange: str = "-20.0 0.1 70.0 1.0 100.0"  #: energy range
@@ -79,8 +79,13 @@ class FdmnesXasInput:
             self.structpath = self.xs.filepath
         else:
             self.xs = get_structure(self.structpath, absorber=self.absorber)
+        #: radius
+        self.set_radius(self.radius)
+        #: structure type
         if self.struct_type is None:
             self.struct_type = self.xs.struct_type
+        else:
+            self.xs.struct_type = self.struct_type
         #: template
         if self.tmplpath is None:
             self.tmplpath = Path(TEMPLATE_FOLDER, "fdmnes_xas.tmpl")
@@ -92,6 +97,10 @@ class FdmnesXasInput:
         if self.params is None:
             self.params = FDMNES_DEFAULT_PARAMS
             self.params = self.optimize_params()
+
+    def set_radius(self, value: float):
+        self.radius = value
+        self.xs.radius = value
 
     def validate_edge(self):
         """Validates and adjusts the edge attribute"""
@@ -225,30 +234,25 @@ class FdmnesXasInput:
                     sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.3f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
                     structout.append(sitestr)
         elif "mol" in struct_type.lower():
+            #: build the cluster and map by distance from absorber at (0,0,0)
+            mol = self.xs.cluster
+            map_mol_by_dist = [(0, 0)]
+            for i, site in enumerate(mol[1:]):
+                isite = i+1
+                dist = mol.get_distance(0, isite)
+                map_mol_by_dist.append((isite, dist))
             #: absorber
-            structout.append("Z_absorber")
-            structout.append(f"   {self.absorber.Z}")
+            structout.append("Absorber")
+            structout.append("   1")
             #: molecule
             structout.append("Molecule")
             structout.append("   1.0 1.0 1.0 90.0 90.0 90.0")
-            for (
-                idx,
-                site,
-                site_index,
-                occupancy,
-                len_sites,
-                wyckoff,
-            ) in self.xs.unique_sites:
-                zelems = [elem.Z for elem in site.species.elements]
-                if not len(set(zelems)) == 1:
-                    logger.warning(
-                        f"[{self.xs.label}] site {idx} has species with different Z -> {site.species_string}"
-                    )
-                for elem, elstr in zip(
-                    site.species.elements, site.species_string.split(", ")
-                ):
-                    sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.3f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
-                    structout.append(sitestr)
+            for i, dist in sorted(map_mol_by_dist, key=lambda x: x[1]):
+                site = mol[i]
+                if not len(site.species) == 1:
+                    raise NotImplementedError("TODO: partial site occupancy")
+                el = site.species.elements[0]
+                structout.append(f"  {el.Z:>3d} {site.x:15.10f} {site.y:15.10f} {site.z:15.10f} ! {site.label:>6s} {dist:10.5f} ")
         else:
             errmsg = f"Structure type `{struct_type}` not supported"
             logger.error(errmsg)

@@ -122,7 +122,8 @@ class XasStructure:
         # return self.struct.get_sites_in_sphere(
         #    self.absorber_site.coords, self.cluster_size
         # )
-        return self.struct.get_neighbors(self.absorber_site, self.cluster_size)
+        #return self.struct.get_neighbors(self.absorber_site, self.cluster_size)
+        return self.build_cluster()
 
     @property
     def sga(self):
@@ -293,7 +294,7 @@ class XasStructure:
                 cluster["symbols"].append(site_symbol)
                 cluster["coords"].append(coords)
 
-        return Molecule(cluster["symbols"], cluster["coords"], labels = cluster["tags"])
+        return Molecule(cluster["symbols"], cluster["coords"], labels=cluster["tags"])
 
     def show_unique_sites(self):
         """Show a tabular print for self.unique_sites"""
