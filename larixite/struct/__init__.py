@@ -9,6 +9,7 @@ Wrapper on top of pymatgen to handle atomic structures for XAS calculations
 import numpy as np
 from pathlib import Path
 from typing import Union
+from copy import deepcopy
 from pymatgen.io.xyz import XYZ
 from pymatgen.io.cif import CifParser
 from pymatgen.core import Molecule, Structure, Element, Lattice
@@ -27,19 +28,23 @@ if logger.level != 10:
 
 
 def mol2struct(molecule: Molecule) -> Structure:
-    """Convert a pymatgen Molecule to Structure"""
+    """Convert a pymatgen Molecule to Structure -> WARNING: not working as expected"""
     # extend the lattice
-    # alat, blat, clat = np.max(molecule.cart_coords, axis=0)
-    alat, blat, clat = 1.0, 1.0, 1.0
+    cart_coords = deepcopy(molecule.cart_coords)
+    species = deepcopy(molecule.species)
+    # build lattice
+    xcoords = np.array([coord[0] for coord in cart_coords])
+    ycoords = np.array([coord[1] for coord in cart_coords])
+    zcoords = np.array([coord[2] for coord in cart_coords])
+    alat = xcoords.max() - xcoords.min()
+    blat = ycoords.max() - ycoords.min()
+    clat = zcoords.max() - zcoords.min()
+    offset = np.array([abs(xcoords.min()), abs(ycoords.min()), abs(zcoords.min())])
+    cart_coords += offset
     lattice = Lattice.from_parameters(
         a=alat, b=blat, c=clat, alpha=90, beta=90, gamma=90
     )
-    # Create a list of species
-    species = [Element(sym) for sym in molecule.species]
-    # Create a list of coordinates
-    coords = molecule.cart_coords
-    # Create the Structure object
-    struct = Structure(lattice, species, coords, coords_are_cartesian=True)
+    struct = Structure(lattice, species, cart_coords, coords_are_cartesian=True)
     return struct
 
 
@@ -78,14 +83,14 @@ def get_structure(
             struct = structs.parse_structures(primitive=False)[frame]
         except Exception:
             raise ValueError(f"could not get structure {frame} from text of CIF")
-        mol = Molecule.from_dict(struct.as_dict())
+        molecule = Molecule.from_dict(struct.as_dict())
         logger.debug("structure created from a CIF file")
         return XasStructureCif(
             name=filepath.name,
             label=filepath.stem,
             filepath=filepath,
-            struct=struct,
-            molecule=mol,
+            structure=struct,
+            molecule=molecule,
             struct_type="crystal",
             absorber=Element(absorber),
         )
@@ -93,15 +98,15 @@ def get_structure(
     if filepath.suffix == ".xyz":
         xyz = XYZ.from_file(filepath)
         molecules = xyz.all_molecules
-        mol = molecules[frame]
-        struct = mol2struct(mol)
+        molecule = molecules[frame]
+        structure = mol2struct(molecule)
         logger.debug("structure created from a XYZ file")
         return XasStructureXyz(
             name=filepath.name,
             label=filepath.stem,
             filepath=filepath,
-            struct=struct,
-            molecule=mol,
+            structure=structure,
+            molecule=molecule,
             struct_type="molecule",
             absorber=Element(absorber),
         )

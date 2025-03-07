@@ -13,8 +13,13 @@ from larixite.utils import get_logger
 
 logger = get_logger("larixite.struct")
 
+
 @dataclass
 class XasStructureCif(XasStructure):
+    @property
+    def struct(self):
+        return self.structure
+
     @property
     def sga(self):
         return SpacegroupAnalyzer(self.struct)
@@ -34,4 +39,3 @@ class XasStructureCif(XasStructure):
     @property
     def equivalent_sites(self):
         return self.sym_struct.equivalent_sites
-

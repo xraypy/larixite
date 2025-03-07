@@ -14,7 +14,7 @@ from random import Random
 from pymatgen.core import Molecule, Structure, Element, Site
 from larixite.utils import fcompact, get_logger, pprint
 
-TOIMPLEMENT = "To implement as subclass, depending on the structure file format"
+TOIMPLEMENT = "To implement as subclass, depending on the input structure file format"
 logger = get_logger("larixite.struct")
 rng = Random()
 
@@ -32,7 +32,11 @@ def site_label(site: Site) -> str:
     -------
     str
     """
-    coords = ",".join([fcompact(s) for s in site.frac_coords])
+    try:
+        site_coords = site.frac_coords
+    except AttributeError:
+        site_coords = site.coords
+    coords = ",".join([fcompact(s) for s in site_coords])
     return f"{site.species_string}[{coords}]"
 
 
@@ -52,7 +56,7 @@ class XasStructure:
     name: str  #: unique name, usually the input filename
     label: str  #: a short label, usually the input filename without extension
     filepath: Path  #: Path object to the input file
-    struct: Structure  #: pymatgen Structure
+    structure: Structure  #: pymatgen Structure
     molecule: Molecule  #: pymatgen Molecule
     absorber: Element  #: pymatgen Element for the absorber
     radius: float = 7  #: radius of the absorption sphere from the absorbing atom
@@ -122,8 +126,12 @@ class XasStructure:
         # return self.struct.get_sites_in_sphere(
         #    self.absorber_site.coords, self.cluster_size
         # )
-        #return self.struct.get_neighbors(self.absorber_site, self.cluster_size)
+        # return self.struct.get_neighbors(self.absorber_site, self.cluster_size)
         return self.build_cluster()
+
+    @property
+    def struct(self):
+        raise NotImplementedError(TOIMPLEMENT)
 
     @property
     def sga(self):
@@ -139,6 +147,10 @@ class XasStructure:
 
     @property
     def wyckoff_symbols(self):
+        raise NotImplementedError(TOIMPLEMENT)
+
+    @property
+    def sites(self):
         raise NotImplementedError(TOIMPLEMENT)
 
     @property
@@ -177,10 +189,10 @@ class XasStructure:
 
     def get_idx_in_struct(self, atom_coords):
         """Get the index corresponding to the given atomic coordinates (cartesian)"""
-        for idx, atom in enumerate(self.struct):
+        for idx, atom in enumerate(self.struct.sites):
             if np.allclose(atom.coords, atom_coords, atol=0.001) is True:
                 return idx
-        errmsg = f"atomic coordinates {atom_coords} not found in self.struct"
+        errmsg = f"atomic coordinates {atom_coords} not found in self.struct.sites"
         logger.error(errmsg)
         # raise IndexError(errmsg)
         return None
@@ -311,6 +323,10 @@ class XasStructure:
         ]
         infos = []
         for idx, site, istruct, occupancy, len_sites, wyckoff in self.unique_sites:
+            try:
+                frac_coords = site.frac_coords
+            except AttributeError:
+                frac_coords = [None, None, None]
             if istruct == self.absorber_idx:
                 idx = f"{idx} (abs)"
             infos.append(
@@ -318,7 +334,7 @@ class XasStructure:
                     idx,
                     istruct,
                     site.label,
-                    site.frac_coords,
+                    frac_coords,
                     occupancy,
                     site.coords,
                     len_sites,
