@@ -47,7 +47,7 @@ Tracker = "https://github.com/xraypy/larixite/issues"
 
 [project.optional-dependencies]
 web = ["flask"]
-jupyter = ["jupyterlab==3.*", "crystal-toolkit"]
+jupyter = ["jupyterlab==3.*", "crystal-toolkit==2025.1.24rc0"]
 test = ["pytest"]
 doc = ["sphinx"]
 dev = ["build", "twine", "ruff"]
