@@ -309,7 +309,7 @@ class FdmnesXasInput:
     def write_input(
         self, inputtext: Union[str, None] = None, outdir: Union[str, Path, None] = None
     ) -> None:
-        """Write the FDMNES input text to disk."""
+        """Write the FDMNES input text to disk (as `job_inp.txt`) and return the output directory"""
         if inputtext is None:
             inputtext = self.get_input()
         if outdir is None:
@@ -318,6 +318,7 @@ class FdmnesXasInput:
             outdir = (
                 Path(tempfile.gettempdir()) / "larixite" / "fdmnes" / str(self.xs.name)
             )
+            outdir.mkdir(parents=True, exist_ok=True)
             outdir = tempfile.mkdtemp(dir=outdir, prefix="job_")
         if isinstance(outdir, str):
             outdir = Path(outdir)
@@ -328,4 +329,4 @@ class FdmnesXasInput:
         with open(outdir / "fdmfile.txt", "w") as fp:
             fp.write("1\njob_inp.txt")
         logger.info(f"written `{fnout}`")
-        return
+        return outdir

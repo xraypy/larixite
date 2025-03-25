@@ -27,6 +27,9 @@ def test_fdmnes():
             f = FdmnesXasInput(sg, absorber=abs)
             text = f.get_input()
             assert len(text) > 700  # TODO: find a better test
+            #: test the inputs writes correctly to disk into a temporary directory
+            outdir = f.write_input()
+            assert outdir.exists()
 
 
 if __name__ == "__main__":
