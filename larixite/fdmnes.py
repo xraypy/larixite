@@ -28,11 +28,11 @@ FDMNES_DEFAULT_PARAMS = {
     "Quadrupole": False,
     "Density": False,
     "Density_all": False,
-    "SCF": False,
     "Green": True,
     "Memory_save": True,
     "Relativism": False,
     "Spinorbit": None,
+    "SCF": False,
     "SCFexc": False,
     "SCFexcv": False,
     "Screening": False,
@@ -161,7 +161,14 @@ class FdmnesXasInput:
                 "Spinorbit enabled. **NOTE**: the simulations are typically 4 to 8 times longer and need 2 times more memory space"
             )
 
-        if 8 in atoms_z:
+        if (8 in atoms_z) and (params["SCF"] is True):
+            """Sometimes, and specifically for oxides, it can be noted that SCF leads to solutions not
+            converging versus the cluster radius. One observes for instance a beating phenomenon
+            on the atomic charges, versus the number of atomic shells incoming in the calculation
+            area. This can be overcome by the use of the keyword "Full_atom" which suppress an
+            approximation, taking the cluster atoms equivalent by the space group symmetry
+            instead of the punctual group symmetry."""
+
             params["Full_atom"] = True
 
         if "mol" in self.struct_type.lower():
@@ -238,7 +245,7 @@ class FdmnesXasInput:
             mol = self.xs.cluster
             map_mol_by_dist = [(0, 0)]
             for i, site in enumerate(mol[1:]):
-                isite = i+1
+                isite = i + 1
                 dist = mol.get_distance(0, isite)
                 map_mol_by_dist.append((isite, dist))
             #: absorber
@@ -252,7 +259,9 @@ class FdmnesXasInput:
                 if not len(site.species) == 1:
                     raise NotImplementedError("TODO: partial site occupancy")
                 el = site.species.elements[0]
-                structout.append(f"  {el.Z:>3d} {site.x:15.10f} {site.y:15.10f} {site.z:15.10f} ! {site.label:>6s} {dist:10.5f} ")
+                structout.append(
+                    f"  {el.Z:>3d} {site.x:15.10f} {site.y:15.10f} {site.z:15.10f} ! {site.label:>6s} {dist:10.5f} "
+                )
         else:
             errmsg = f"Structure type `{struct_type}` not supported"
             logger.error(errmsg)
