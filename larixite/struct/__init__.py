@@ -28,7 +28,7 @@ if logger.level != 10:
 
 
 def mol2struct(molecule: Molecule) -> Structure:
-    """Convert a pymatgen Molecule to Structure -> WARNING: not working as expected"""
+    """Convert a pymatgen Molecule to Structure -> WARNING: not working as expected -> DO NOT USE!"""
     # extend the lattice
     cart_coords = deepcopy(molecule.cart_coords)
     species = deepcopy(molecule.species)
@@ -73,6 +73,7 @@ def get_structure(
         errmsg = f"{filepath} not found"
         logger.error(errmsg)
         raise FileNotFoundError(errmsg)
+    structout = None
     #: CIF
     if filepath.suffix == ".cif":
         try:
@@ -85,7 +86,7 @@ def get_structure(
             raise ValueError(f"could not get structure {frame} from text of CIF")
         molecule = Molecule.from_dict(struct.as_dict())
         logger.debug("structure created from a CIF file")
-        return XasStructureCif(
+        structout = XasStructureCif(
             name=filepath.name,
             label=filepath.stem,
             filepath=filepath,
@@ -101,7 +102,7 @@ def get_structure(
         molecule = molecules[frame]
         structure = mol2struct(molecule)
         logger.debug("structure created from a XYZ file")
-        return XasStructureXyz(
+        structout = XasStructureXyz(
             name=filepath.name,
             label=filepath.stem,
             filepath=filepath,
@@ -110,8 +111,16 @@ def get_structure(
             struct_type="molecule",
             absorber=Element(absorber),
         )
-    #: UNSUPPORTED
-    raise ValueError(f"File type {filepath.suffix} not supported yet")
+    #: some checks on the structure
+    if not structout.struct.is_ordered:
+        logger.warning(
+            f"[{structout.name}] contains partially occupied sites that are not fully supported yet"
+        )
+    if structout is not None:
+        return structout
+    else:
+        #: UNSUPPORTED
+        raise ValueError(f"File type {filepath.suffix} not supported yet")
 
 
 def get_structs_from_dir(
@@ -162,9 +171,9 @@ def get_structs_from_dir(
         ]
     if isinstance(absorbers, str):
         absorbers = [absorbers] * len(structs_paths)
-    assert (
-        len(structs_paths) == len(absorbers)
-    ), f"number of structures ({len(structs_paths)}) != number of absorbers ({len(absorbers)})"
+    assert len(structs_paths) == len(absorbers), (
+        f"number of structures ({len(structs_paths)}) != number of absorbers ({len(absorbers)})"
+    )
     structs = []
     for istruct, struct_path in enumerate(structs_paths):
         struct = get_structure(struct_path, absorbers[istruct], **kwargs)
