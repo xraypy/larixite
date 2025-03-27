@@ -13,7 +13,7 @@ spectroscopy (XAS, XES, RIXS) from the atomic structures
 from dataclasses import dataclass
 from typing import Union
 from pathlib import Path
-from pymatgen.core import __version__ as pymatgen_version, Element
+from pymatgen.core import __version__ as pymatgen_version, Element, Molecule
 from larixite.struct import get_structure
 from larixite.struct.xas import XasStructure
 from larixite.utils import get_logger, strict_ascii, isotime
@@ -205,6 +205,10 @@ class FdmnesXasInput:
             self.optimize_params()
         else:
             struct_type = self.struct_type
+        if "crys" in struct_type.lower() and isinstance(self.xs.struct, Molecule):
+            errmsg = "cannot generate a crystal input from a molecule -> use `struct_type='molecule'`"
+            logger.error(errmsg)
+            raise AttributeError(errmsg)
         logger.debug(f"Generating structure section for {struct_type}")
         structout = []
         if "crys" in struct_type.lower():
