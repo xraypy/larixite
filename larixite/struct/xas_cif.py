@@ -26,7 +26,8 @@ class XasStructureCif(XasStructure):
 
     @property
     def space_group(self):
-        return self.sga.get_symmetry_dataset().international
+        spg = self.sga.get_symmetry_dataset()
+        return f"{spg.international}:{spg.choice}"
 
     @property
     def sym_struct(self):
