@@ -1,5 +1,3 @@
-import pytest
-
 from larixite import get_amcsd
 from larixite.utils import get_logger
 from larixite.struct import get_structure
