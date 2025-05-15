@@ -59,6 +59,7 @@ AMCSD_TRIM = 'amcsd_cif1.db'
 AMCSD_FULL = 'amcsd_cif2.db'
 
 SOURCE_URLS = ('https://docs.xrayabsorption.org/databases/',
+               'https://figshare.com/ndownloader/files/54545639',
                'https://millenia.cars.aps.anl.gov/xraylarch/downloads/')
 
 CIF_TEXTCOLUMNS = ('formula', 'compound', 'pub_title', 'formula_title', 'a',
@@ -1317,20 +1318,25 @@ def get_amcsd(download_full=True, timeout=30):
         return _CIFDB
     t0 = time.time()
     if download_full:
+        downloaded = False
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
         for src in SOURCE_URLS:
             url = f"{src:s}/{AMCSD_FULL:s}"
-            req = requests.get(url, verify=True, timeout=timeout)
-            if req.status_code == 200:
+            try:
+                req = requests.get(url, verify=True, timeout=timeout)
+                downloaded  = (req.status_code == 200)
+            except Exception:
+                downloaded = False
+            if downloaded:
                 break
-        if req.status_code == 200:
+        if downloaded:
             with open(dbfull, 'wb') as fh:
                 fh.write(req.content)
-            print("Downloaded  %s : %.2f sec" % (dbfull, time.time()-t0))
+            print(f"Downloaded {url} to {dbfull}: {(time.time()-t0):.2f} sec")
             time.sleep(0.25)
             _CIFDB = AMCSD(dbfull)
             return _CIFDB
-    # finally download of full must have failed
+    # download of full db must have failed, fallback to trimmed
     return AMCSD()
 
 def get_cif(ams_id):
