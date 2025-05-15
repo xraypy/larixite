@@ -2,8 +2,9 @@ import os
 from pathlib import Path
 from random import Random
 from io import StringIO
+from typing import Union
 import numpy as np
-from pymatgen.core import __version__ as pymatgen_version
+from pymatgen.core import __version__ as pymatgen_version, Structure, Site
 
 from xraydb import atomic_symbol, atomic_number, xray_edge
 
@@ -18,7 +19,7 @@ rng = Random()
 TEMPLATE_FOLDER = Path(Path(__file__).parent, 'templates')
 
 
-def read_cif_structure(ciftext):
+def read_cif_structure(ciftext: str) -> Structure:
     """read CIF text, return CIF Structure
 
     Arguments
@@ -37,19 +38,32 @@ def read_cif_structure(ciftext):
     try:
         cifstructs = CifParser(StringIO(ciftext), **PMG_CIF_OPTS)
 
-    except:
+    except Exception:
         raise ValueError('could not parse text of CIF')
 
     try:
-        cstruct = cifstructs.parse_structures()[0]
-    except:
+        cstruct = cifstructs.parse_structures(primitive=False)[0]
+    except Exception:
         raise ValueError('could not get structure from text of CIF')
     return cstruct
 
 
-def site_label(site):
+def site_label(site: Site) -> str:
+    """
+    return a string label for a pymatgen Site object, 
+    using the species string and fractional coordinates
+    
+    Parameters
+    ----------
+    site : pymatgen Site object
+    
+    Returns
+    -------
+    str
+    """
     coords = ','.join([fcompact(s) for s in site.frac_coords])
     return f'{site.species_string}[{coords}]'
+
 
 class CIF_Cluster():
     """
@@ -66,19 +80,26 @@ class CIF_Cluster():
         self.with_h = with_h
         self.cluster_size = cluster_size
         self.struct = None
-
-        if isinstance(self.absorber, int):
-            self.absorber   = atomic_symbol(self.absorber)
-        if isinstance(self.absorber, str):
-            self.absorber_z   = atomic_number(self.absorber)
-
         if ciftext is None and filename is not None:
             self.ciftext = open(filename, 'r').read()
-
         if self.ciftext is not None:
             self.parse_ciftext(self.ciftext)
 
     def set_absorber(self, absorber=None):
+        """
+        set the absorbing atom element
+        
+        Parameters
+        ----------
+        absorber : None, int, or str
+            if None, no change will be made.
+            if int, the atomic number of the absorbing element
+            if str, the atomic symbol of the absorbing element
+        
+        Notes
+        -----
+        The absorber atom is assumed to be in the CIF structure.
+        """
         self.absorber_z = None
         self.absorber = absorber
         if isinstance(self.absorber, int):
@@ -86,7 +107,13 @@ class CIF_Cluster():
         if isinstance(self.absorber, str):
             self.absorber_z = atomic_number(self.absorber)
 
-    def parse_ciftext(self, ciftext=None, absorber=None):
+    def parse_ciftext(
+        self, ciftext: Union[str, None] = None, absorber: Union[str, int, None] = None
+    ):
+        """
+        re-initialize ciftext and absorber if either argument is not None and
+        read the structure
+        """
         if absorber is not None:
             self.set_absorber(absorber)
         if ciftext is not None:
@@ -151,7 +178,6 @@ class CIF_Cluster():
                 all_sites[xat][label] = self.atom_sites[xat][i]
         self.all_sites = all_sites
 
-
     def build_cluster(self, absorber=None, absorber_site=1, cluster_size=None):
         if absorber is not None:
             self.set_absorber(absorber)
@@ -214,7 +240,7 @@ def cif_extra_titles(cifid):
     """get 'extra titles' from AMCSD cif id"""
     try:
         cif = get_cif(cifid)
-    except:
+    except Exception:
         return []
 
     # titles from CIF
