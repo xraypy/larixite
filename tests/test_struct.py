@@ -3,8 +3,8 @@ from larixite.struct import get_structure
 from larixite.utils import get_logger
 
 logger = get_logger("larixite.test")
-testdir = Path().cwd() / "tests"
-structsdir = testdir / "structs"
+
+structsdir = Path(__file__).parent / "structs"
 
 test_structures = (  # filename_in_structsdir, absorber_str, absorber_index, occupancy
     ("CuO6_D4h.xyz", "Cu", 0, 1),
