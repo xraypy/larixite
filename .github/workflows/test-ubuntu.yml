@@ -36,5 +36,5 @@ jobs:
           pip install ".[dev,test,doc]"
       - name: Run test suite
         run: |
-        cd tests
-        python -m pytest --cov=./ --cov-report=xml
+          cd tests
+          python -m pytest --cov=./ --cov-report=xml
