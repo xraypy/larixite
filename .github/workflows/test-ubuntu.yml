@@ -30,7 +30,7 @@ jobs:
       - name: Install conda dependencies
         run: |
           printenv
-          conda install -y -c conda-forge python=${{ matrix.python-version }} "numpy>=1.26" "scipy>=1.14" pytest pytest-cov coverage
+          conda install -y -c conda-forge python=${{ matrix.python-version }} "numpy>=1.26" scipy pytest pytest-cov coverage
       - name: Install larixite and dependencies with pip
         run: |
           pip install ".[dev,test,doc]"
