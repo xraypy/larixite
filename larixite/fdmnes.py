@@ -369,9 +369,14 @@ def struct2fdmnes(inp: Union[str, Path], absorber:
     if filename is None:
         filename = f'unknown.{format}'
 
+    if isinstance(absorber, str):
+        absorber = Element(absorber)
+    elif isinstance(absorber, int):
+        absorber = Element.from_Z(absorber)
+
     structs = get_structure_from_text(inp, absorber, frame=frame, format=format,
                                       filename=filename)
-
+    fout_name = f"{filename.replace('.', '_')}_{absorber.symbol}.inp"
     fdm = FdmnesXasInput(structs, absorber=absorber)
-    return {'fdmfile.txt': '1\njob_inp.txt\n',
-           'job_inp.txt': fdm.get_input()}
+    return {'fdmfile.txt': f'1\n{fout_name}\n',
+            fout_name: fdm.get_input()}
