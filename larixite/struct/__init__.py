@@ -5,8 +5,11 @@
 Wrapper on top of pymatgen to handle atomic structures for XAS calculations
 ============================================================================
 """
-
+import tempfile
+import os
+from io import StringIO
 import numpy as np
+
 from pathlib import Path
 from typing import Union
 from copy import deepcopy
@@ -16,7 +19,7 @@ from pymatgen.core import Molecule, Structure, Element, Lattice
 from larixite.struct.xas import XasStructure
 from larixite.struct.xas_cif import XasStructureCif
 from larixite.struct.xas_xyz import XasStructureXyz
-from larixite.utils import get_logger
+from larixite.utils import get_logger, read_textfile
 from larixite.amcsd_utils import PMG_CIF_OPTS
 
 logger = get_logger("larixite.struct")
@@ -83,7 +86,7 @@ def get_structure(
         try:
             struct = structs.parse_structures(primitive=False)[frame]
         except Exception:
-            raise ValueError(f"could not get structure {frame} from text of CIF")
+            raise ValueError(f"could not get structure {frame} from text of CIF {filepath}")
         molecule = Molecule.from_dict(struct.as_dict())
         logger.debug("structure created from a CIF file")
         structout = XasStructureCif(
@@ -93,10 +96,10 @@ def get_structure(
             structure=struct,
             molecule=molecule,
             struct_type="crystal",
-            absorber=Element(absorber),
+            absorber=Element(absorber)
         )
     #: XYZ
-    if filepath.suffix == ".xyz":
+    elif filepath.suffix == '.xyz':
         xyz = XYZ.from_file(filepath)
         molecules = xyz.all_molecules
         molecule = molecules[frame]
@@ -109,19 +112,94 @@ def get_structure(
             structure=structure,
             molecule=molecule,
             struct_type="molecule",
-            absorber=Element(absorber),
+            absorber=Element(absorber)
         )
-    #: some checks on the structure
+    else:
+        raise ValueError(f"unknown structure format '{format}'")
+
     if not structout.struct.is_ordered:
         logger.warning(
             f"[{structout.name}] contains partially occupied sites that are not fully supported yet"
         )
-    if structout is not None:
-        return structout
-    else:
-        #: UNSUPPORTED
-        raise ValueError(f"File type {filepath.suffix} not supported yet")
+    return structout
 
+
+def get_structure_from_text(text: str,
+                            absorber: Union[str, int, Element],
+                            frame: int = 0,
+                            format: str = 'cif',
+                            filename: str = 'unknown.cif') -> XasStructure:
+    """Get an XasStructure from the text of a structural file, according to its format
+
+    Parameters
+    ----------
+    text : str
+        text of file
+    absorber : str, int, or Element
+        Atomic symbo or number of the absorbing element
+    frame : int, optional
+        Index of the structure for multi-frame structures in the CIF/XYZ file [0]
+    format : str
+        format of text : 'cif' or 'xyz' ['cif']
+    filename : str
+        full path to filename  ['unknown.{format}']
+    Returns
+    -------
+    XasStructure
+        The XAS structure group for the specified file and absorber.
+    """
+    if isinstance(absorber, str):
+        absorber = Element(absorber)
+    elif isinstance(absorber, int):
+        absorber = Element.from_Z(absorber)
+
+    structout = None
+    filepath = Path(filename).absolute()
+    #: CIF
+    if format == "cif":
+        try:
+            structs = CifParser(StringIO(text), **PMG_CIF_OPTS)
+        except Exception:
+            raise ValueError(f"could not parse CIF text")
+        try:
+            struct = structs.parse_structures(primitive=False)[frame]
+        except Exception:
+            raise ValueError(f"could not get structure {frame} from text of CIF {filename}")
+        molecule = Molecule.from_dict(struct.as_dict())
+        logger.debug("structure created from a CIF file")
+        structout = XasStructureCif(name=filepath.name,  label=filepath.stem,
+                                    filepath=filepath,
+                                    structure=struct,
+                                    molecule=molecule,
+                                    struct_type="crystal",
+                                    absorber=absorber)
+
+    #: XYZ
+    elif format == 'xyz':
+        xyz_tfile = Path(tempfile.gettempdir(), 'tmp_0.xyz')
+        with open(xyz_tfile, 'w') as fh:
+            fh.write(text)
+
+        xyz = XYZ.from_file(xyz_tfile)
+        molecules = xyz.all_molecules
+        molecule = molecules[frame]
+        structure = mol2struct(molecule)
+        logger.debug("structure created from a XYZ file")
+        structout = XasStructureXyz(name=filepath.name, label=filepath.stem,
+                                    filepath=filepath,
+                                    structure=structure,
+                                    molecule=molecule,
+                                    struct_type="molecule",
+                                    absorber=absorber)
+        os.unlink(xyz_tfile)
+    else:
+        raise ValueError(f"unknown structure format '{format}'")
+
+    if not structout.struct.is_ordered:
+        logger.warning(
+            f"[{structout.name}] contains partially occupied sites that are not fully supported yet"
+        )
+    return structout
 
 def get_structs_from_dir(
     structsdir: Union[str, Path],
