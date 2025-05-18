@@ -9,14 +9,13 @@ Generating FDMNES input files
 spectroscopy (XAS, XES, RIXS) from the atomic structures
 
 """
-
 from dataclasses import dataclass
 from typing import Union
 from pathlib import Path
 from pymatgen.core import __version__ as pymatgen_version, Element, Molecule
-from larixite.struct import get_structure
+from larixite.struct import get_structure, get_structure_from_text
 from larixite.struct.xas import XasStructure
-from larixite.utils import get_logger, strict_ascii, isotime
+from larixite.utils import get_logger, strict_ascii, isotime, read_textfile
 from larixite.version import __version__ as larixite_version
 
 logger = get_logger("larixite.fdmnes")
@@ -334,3 +333,45 @@ class FdmnesXasInput:
             fp.write("1\njob_inp.txt")
         logger.info(f"written `{fnout}`")
         return outdir
+
+
+
+def struct2fdmnes(inp: Union[str, Path], absorber:
+                  Union[str, int, Element],
+                  frame: int = 0,
+                  format: str = 'cif',
+                  filename: Union[None, str] = None) -> dict:
+    """convert CIF/XYZ  into a dictionary of {name: text} for FDMNES output files
+
+    Parameters
+    ----------
+    inp : str or Path
+        text of CIF file, name of CIF file, or Path to CIF file
+    absorber : str, int, or Element
+        Atomic symbo or number of the absorbing element
+    frame : int, optional
+        Index of the structure for multi-frame structures in the CIF file [0]
+    format : str
+        format of text : 'cif' or 'xyz' ['cif']
+    filename : str
+        full path to filename  ['unknown.{format}']
+
+    Returns
+    -------
+    XasStructure
+        The XAS structure group for the specified file and absorber.
+
+    """
+    if len(inp) < 512 and Path(inp).exists():
+        if filename is None:
+            filename = Path(inp).absolute().as_posix()
+        inp = read_textfile(inp)
+    if filename is None:
+        filename = f'unknown.{format}'
+
+    structs = get_structure_from_text(inp, absorber, frame=frame, format=format,
+                                      filename=filename)
+
+    fdm = FdmnesXasInput(structs, absorber=absorber)
+    return {'fdmfile.txt': '1\njob_inp.txt\n',
+           'job_inp.txt': fdm.get_input()}
