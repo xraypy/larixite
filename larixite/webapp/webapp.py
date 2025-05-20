@@ -174,7 +174,6 @@ def cifs(cifid=None):
             config['zip_link'] = None
             config['out_links'] = {}
 
-
         elif 'feff' in request.form.keys():
             config['absorber'] = absorber = request.form.get('absorbing_atom')
             config['edge'] = edge =request.form.get('edge')
@@ -317,10 +316,20 @@ def output(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
                     cluster_size=float(cluster_size), cifid=xcifid,
                     with_h=with_h, absorber_site=int(site))
     elif form == 'fdmnes':
+        xcifid = cifid.replace('.', '_')
+        oname = f'AMSCD_{xcifid}_{absorber}'
         out = struct2fdmnes(config['ciftext'], absorber=absorber,
-                            filename=f'AMSCD_{xcifid}.cif')
-        result = out[fname]
-
+                            filename=f'AMSCD_{xcifid}')
+        if fname == 'fdmfile.txt':
+            result = out.get(fname, None)
+        else:
+            result = out.get(oname, None)
+        if result is None:
+            for k in out:
+                if k != 'fdmfile.txt':
+                    result = out.get(k, None)
+        if result is None:
+            result = ', '.join(out.keys())
     return Response(result, mimetype='text/plain')
 
 
