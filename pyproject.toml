@@ -27,12 +27,12 @@ dependencies = [
     "pyshortcuts",
 ]
 
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["X-ray spectroscopy", "Crystallography"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
