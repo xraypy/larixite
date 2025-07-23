@@ -4,12 +4,14 @@ from random import Random
 from io import StringIO
 from typing import Union
 import numpy as np
-from pymatgen.core import __version__ as pymatgen_version, Structure, Site
+from pymatgen.core import __version__ as pymatgen_version, Structure, Site, Molecule
+from pymatgen.io.cif import CifParser
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from xraydb import atomic_symbol, atomic_number, xray_edge
 
-from .utils import strict_ascii, fcompact, isotime
-from .amcsd_utils import PMG_CIF_OPTS, CifParser, Molecule, SpacegroupAnalyzer
+from .utils import strict_ascii, fcompact, isotime, get_logger
+from .amcsd_utils import PMG_CIF_OPTS
 from .amcsd import get_cif
 
 from .version import __version__ as x_version
@@ -17,6 +19,11 @@ from .version import __version__ as x_version
 rng = Random()
 
 TEMPLATE_FOLDER = Path(Path(__file__).parent, 'templates')
+
+logger = get_logger("larixite.cif_cluster")
+if logger.level != 10:
+    import warnings
+    warnings.filterwarnings("ignore", category=UserWarning)
 
 
 def read_cif_structure(ciftext: str) -> Structure:
@@ -50,13 +57,13 @@ def read_cif_structure(ciftext: str) -> Structure:
 
 def site_label(site: Site) -> str:
     """
-    return a string label for a pymatgen Site object, 
+    return a string label for a pymatgen Site object,
     using the species string and fractional coordinates
-    
+
     Parameters
     ----------
     site : pymatgen Site object
-    
+
     Returns
     -------
     str
@@ -88,14 +95,14 @@ class CIF_Cluster():
     def set_absorber(self, absorber=None):
         """
         set the absorbing atom element
-        
+
         Parameters
         ----------
         absorber : None, int, or str
             if None, no change will be made.
             if int, the atomic number of the absorbing element
             if str, the atomic symbol of the absorbing element
-        
+
         Notes
         -----
         The absorber atom is assumed to be in the CIF structure.

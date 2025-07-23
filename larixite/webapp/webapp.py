@@ -3,6 +3,10 @@ import os
 import time
 import numpy as np
 from pathlib import Path
+from zipfile import ZipFile
+import tempfile
+import random
+from string import ascii_lowercase
 
 from flask import (Flask, redirect, url_for, render_template, flash,
                    request, session, Response, send_from_directory)
@@ -10,6 +14,7 @@ from werkzeug.utils import secure_filename
 
 from larixite import get_amcsd, cif_cluster, cif2feffinp, read_cif_structure
 from larixite.utils import get_homedir
+from larixite.fdmnes import struct2fdmnes
 
 from xraydb import atomic_number
 from xraydb.chemparser import chemparse
@@ -31,6 +36,13 @@ app.secret_key = 'persuasive butternut lanterns'
 app.config.from_object(__name__)
 
 cifdb = config = None
+
+
+def random_string(n=12):
+    """  random_string(n)
+    generates a random string of length n [a-z](n)
+    """
+    return ''.join([random.choice(ascii_lowercase) for i in range(n)])
 
 def connect(session, clear=False, cifid=None):
     global cifdb, config
@@ -109,7 +121,7 @@ def cifs(cifid=None):
         cluster = cif_cluster(config['ciftext'])
         config['atoms'] = []
         config['cif_link'] = None
-        config['feff_links'] = {}
+        config['outlinks'] = {}
         config['all_sites'] = cluster.all_sites
 
         for at in chemparse(cluster.formula.replace(' ', '')):
@@ -159,8 +171,8 @@ def cifs(cifid=None):
             config['ciffile']  = ''
             config['atoms'] = []
             config['cif_link'] = None
-            config['feff_links'] = {}
-
+            config['zip_link'] = None
+            config['out_links'] = {}
 
         elif 'feff' in request.form.keys():
             config['absorber'] = absorber = request.form.get('absorbing_atom')
@@ -178,11 +190,37 @@ def cifs(cifid=None):
                 elif config['cifid'] is not None:
                     cifid = config['cifid']
                     config['cif_link'] = (f'AMSCD_{cifid}.cif', cifid)
-                config['feff_links'] = {}
+                    config['zip_link'] = (f'AMSCD_{cifid}_feff.zip', cifid,
+                                         absorber, edge, cluster_size, with_h, 'feff')
+                config['out_links'] = {}
                 for slabel, sindex in config['all_sites'][absorber].items():
                     link = f'feff_{cifid}_{absorber}{sindex}_{edge}.inp'
-                    config['feff_links'][link] = (slabel, cifid, absorber, edge, sindex,
-                                                  cluster_size, with_h)
+                    config['out_links'][link] = (slabel, cifid, absorber, edge, sindex,
+                                                  cluster_size, with_h, 'feff')
+
+
+        elif 'fdmnes' in request.form.keys():
+            config['absorber'] = absorber = request.form.get('absorbing_atom')
+            config['edge'] = edge =request.form.get('edge')
+            config['cluster_size'] = cluster_size = request.form.get('cluster_size')
+            with_h = request.form.get('with_h') in ('1', 'on', 'True', 1, True)
+            config['with_h'] = with_h = int(with_h)
+            if config['ciftext'] is not None:
+                out = struct2fdmnes(config['ciftext'], absorber=absorber,
+                                        filename=f'AMSCD_{cifid}.cif')
+                cifid = config['cifid']
+                if config['ciffile'] not in ('', None, 'None'):
+                    cifid = config['ciffile']
+                elif config['cifid'] is not None:
+                    cifid = config['cifid']
+                    config['cif_link'] = (f'AMSCD_{cifid}.cif', cifid)
+                    config['zip_link'] = (f'AMSCD_{cifid}_fdmnes.zip', cifid,
+                                         absorber, edge, cluster_size, with_h, 'fdmnes')
+                config['out_links'] = {}
+                for slabel, text in out.items():
+                    link = f'fdmnes_{slabel}'
+                    config['out_links'][slabel] = (slabel, cifid, absorber, edge, 0,
+                                                   cluster_size, with_h, 'fdmnes')
 
     return render_template('index.html', **config)
 
@@ -194,11 +232,7 @@ def index():
     return render_template('index.html', **config)
 
 
-@app.route('/feffinp/<cifid>/<absorber>/<site>/<edge>/<cluster_size>/<with_h>/<fname>')
-def feffinp(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
-            with_h=False, fname=None):
-    connect(session, cifid=cifid)
-    global cifdb, config
+def get_elements(absorber):
     if absorber.startswith('Wat'):
         absorber.replace('Wat', 'O')
     if absorber.startswith('O-H'):
@@ -216,25 +250,87 @@ def feffinp(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
                 stoich = chemparse(absorber[:].replace('M', ''))
             except:
                 stoich = {}
+    return stoich, absorber
 
+
+@app.route('/zipfile/<cifid>/<absorber>/<edge>/<cluster_size>/<with_h>/<form>/<fname>')
+def zipfile(cifid=None, absorber=None, edge='K', cluster_size=7.0,
+            with_h=False, form='feff', fname=None):
+    connect(session, cifid=cifid)
+    global cifdb, config
+    stoich, absorber = get_elements(absorber)
     if len(stoich) != 1:
-        txt = f"could not parse absorber: '{absorber}' for CIF {cifid}  {stoich}"
+        flash(f"could not parse absorber: '{absorber}' for CIF {cifid}  {stoich}")
+        return
+    absorber = list(stoich.keys())[0]
+    if with_h in  ('1', 'on', 'True', 1, True):
+        with_h = 1
     else:
-        try:
-            xcifid = int(cifid)
-        except:
-            xcifid = None
+        with_h = 0
+    cluster = cif_cluster(config['ciftext'], absorber=absorber)
+    config['all_sites'] = cluster.all_sites
 
-        absorber = list(stoich.keys())[0]
-        if with_h in  ('1', 'on', 'True', 1, True):
-            with_h = 1
-        else:
-            with_h = 0
-        feffinp = cif2feffinp(config['ciftext'], absorber, edge=edge,
+    tfolder = Path(tempfile.gettempdir())
+    tfile = random_string() + '.zip'
+    zfile = ZipFile(Path(tfolder, tfile), mode='w')
+    zfile.writestr(f'AMSCD_{cifid}.cif', config['ciftext'])
+    if form =='feff':
+        for slabel, sindex in config['all_sites'][absorber].items():
+            oname = f'feff_{cifid}_{absorber}{sindex}_{edge}.inp'
+            result = cif2feffinp(config['ciftext'], absorber, edge=edge,
+                                    cluster_size=float(cluster_size), cifid=int(cifid),
+                                 with_h=with_h, absorber_site=int(sindex))
+            zfile.writestr(oname, result)
+    elif form == 'fdmnes':
+        out = struct2fdmnes(config['ciftext'], absorber=absorber,
+                                filename=f'AMSCD_{cifid}.cif')
+        for key, val in out.items():
+            zfile.writestr(key, val)
+    zfile.close()
+
+    return send_from_directory(tfolder, tfile, mimetype='application/zip',
+                              as_attachment=True,  download_name=fname)
+
+@app.route('/output/<cifid>/<absorber>/<site>/<edge>/<cluster_size>/<with_h>/<form>/<fname>')
+def output(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
+            with_h=False, form='feff', fname=None):
+    connect(session, cifid=cifid)
+    global cifdb, config
+    stoich, absorber = get_elements(absorber)
+    if len(stoich) != 1:
+        flash(f"could not parse absorber: '{absorber}' for CIF {cifid}  {stoich}")
+        return
+
+    try:
+        xcifid = int(cifid)
+    except:
+        xcifid = None
+
+    absorber = list(stoich.keys())[0]
+    if with_h in  ('1', 'on', 'True', 1, True):
+        with_h = 1
+    else:
+        with_h = 0
+    if form =='feff':
+        result = cif2feffinp(config['ciftext'], absorber, edge=edge,
                     cluster_size=float(cluster_size), cifid=xcifid,
                     with_h=with_h, absorber_site=int(site))
-
-    return Response(feffinp, mimetype='text/plain')
+    elif form == 'fdmnes':
+        xcifid = cifid.replace('.', '_')
+        oname = f'AMSCD_{xcifid}_{absorber}'
+        out = struct2fdmnes(config['ciftext'], absorber=absorber,
+                            filename=f'AMSCD_{xcifid}')
+        if fname == 'fdmfile.txt':
+            result = out.get(fname, None)
+        else:
+            result = out.get(oname, None)
+        if result is None:
+            for k in out:
+                if k != 'fdmfile.txt':
+                    result = out.get(k, None)
+        if result is None:
+            result = ', '.join(out.keys())
+    return Response(result, mimetype='text/plain')
 
 
 @app.route('/ciffile/<cifid>/<fname>')
