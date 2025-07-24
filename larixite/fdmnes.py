@@ -215,8 +215,13 @@ class FdmnesXasInput:
             structout.append("Z_absorber")
             structout.append(f"   {self.absorber.Z}")
             #: space group
+            spgrp = self.xs.space_group
+            if spgrp == 1:  #: FDMNES doesn't recognize 1 as a space group -> `P1`
+                spgrp = "P1"
+            if spgrp == 2:  #: FDMNES doesn't recognize 2 as a space group -> `P-1`
+                spgrp = "P-1"
             structout.append("Spgroup")
-            structout.append(f"   {self.xs.space_group}")
+            structout.append(f"   {spgrp}")
             #: occupancy
             structout.append("Occupancy")
             #: crystal
