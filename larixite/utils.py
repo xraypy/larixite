@@ -6,13 +6,17 @@ Various utilities for Larixite
 import os
 import logging
 import io
+from datetime import datetime
 from typing import Union
 from gzip import GzipFile
 from pathlib import Path
 from packaging import version as pkg_version
 from charset_normalizer import from_bytes
 
-from pyshortcuts import get_homedir, bytes2str, isotime
+try:
+    from pwd import getpwnam
+except ImportError:
+    getpwnam = None
 
 HAS_IPYTHON = False
 try:
@@ -25,6 +29,78 @@ except ImportError:
 # Enable color output in Jupyter Notebook
 if HAS_IPYTHON:
     InteractiveShell.ast_node_interactivity = "all"
+
+
+def get_homedir() -> Path:
+    """
+    Determine home directory.
+
+    Modified code from pyshortcuts.get_homedir() [https://newville.github.io/pyshortcuts].
+
+    Returns:
+        Home directory Path.
+    """
+    # for Unixes, allow for sudo case
+    susername = os.environ.get("SUDO_USER", None)
+    if susername is not None and getpwnam is not None:
+        # use SUDO_USER home directory
+        homedir = Path(getpwnam(susername).pw_dir).resolve().as_posix()
+    else:
+        # get home directory from environment variable
+        homedir = Path.home()
+
+    # For Windows, ask for parent of Roaming 'Application Data' directory
+    if homedir is None and os.name == "nt":
+        try:
+            # use Windows API to get home directory
+            from win32com.shell import shellcon, shell
+
+            homedir = Path(
+                shell.SHGetFolderPath(0, shellcon.CSIDL_APPDATA, 0, 0)
+            )
+        except ImportError:
+            pass
+
+    # try the HOME environmental variable
+    if homedir is None:
+        # try HOME environment variable
+        test = os.path.expandvars("$HOME")
+        if test not in (None, "$HOME"):
+            homedir = Path(test)
+
+    # finally, use current folder
+    if homedir is None:
+        # use current directory as home directory
+        homedir = Path(".")
+
+    return homedir
+
+
+def isotime(
+    dtime: Union[None, datetime, float, int] = None,
+    timespec: str = "seconds",
+    sep: str = " ",
+) -> str:
+    """Return ISO format of current timestamp:
+          2024-04-27 17:31:12
+
+    Args:
+        dtime: datetime object or timestamp (default None) to use
+        timespec: string indicating the desired precision of the ISO
+            timestamp (default 'seconds')
+        sep: separator to use between date and time (default ' ')
+
+    Returns:
+        ISO-formatted string of the timestamp
+
+    Notes:
+        copied from pyshortcuts.get_homedir() [https://newville.github.io/pyshortcuts]
+    """
+    if dtime is None:
+        dtime = datetime.now()
+    elif isinstance(dtime, (float, int)):
+        dtime = datetime.fromtimestamp(dtime)
+    return datetime.isoformat(dtime, timespec=timespec, sep=sep)
 
 
 home_dir = get_homedir()

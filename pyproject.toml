@@ -24,7 +24,6 @@ dependencies = [
     "xraydb",
     "sqlalchemy>=2",
     "pymatgen>=2024.10.22",
-    "pyshortcuts",
 ]
 
 license = "MIT"
