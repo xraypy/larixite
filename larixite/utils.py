@@ -141,26 +141,26 @@ def show_loggers(clear_handlers=False):
             print(f"+-> Level: {handler.level} ({logging.getLevelName(handler.level)})")
 
 
-
-
 def bytes2str(bytedata):
     "decode bytes using charset_normalizer.from_bytes"
     return str(from_bytes(bytedata).best())
 
+
 def get_path(val: Union[Path, str, bytes]):
-    """return best guess for a posix-style path name from an input string
-    """
+    """return best guess for a posix-style path name from an input string"""
     if isinstance(val, bytes):
         val = bytes2str(val)
     if isinstance(val, str):
         val = Path(val)
     return val.absolute()
 
+
 def is_gzip(filename):
     "is a file gzipped?"
-    with open(get_path(filename), 'rb') as fh:
-        return fh.read(3) == b'\x1f\x8b\x08'
+    with open(get_path(filename), "rb") as fh:
+        return fh.read(3) == b"\x1f\x8b\x08"
     return False
+
 
 def read_textfile(filename: Union[Path, io.IOBase, str, bytes], size=None) -> str:
     """read text from a file as string (decoding from bytes)
@@ -182,15 +182,14 @@ def read_textfile(filename: Union[Path, io.IOBase, str, bytes], size=None) -> st
        splitting on '\n' will give a list of lines.
     3. if filename is given, it can be a gzip-compressed file
     """
-    text = ''
-
+    text = ""
 
     if isinstance(filename, io.IOBase):
         text = filename.read(size)
-        if filename.mode == 'rb':
+        if filename.mode == "rb":
             text = bytes2str(text)
     else:
         fopen = GzipFile if is_gzip(filename) else open
-        with fopen(get_path(filename), 'rb') as fh:
+        with fopen(get_path(filename), "rb") as fh:
             text = bytes2str(fh.read(size))
-    return text.replace('\r\n', '\n').replace('\r', '\n')
+    return text.replace("\r\n", "\n").replace("\r", "\n")
