@@ -9,6 +9,7 @@ Generating FDMNES input files
 spectroscopy (XAS, XES, RIXS) from the atomic structures
 
 """
+
 from dataclasses import dataclass
 from typing import Union
 from pathlib import Path
@@ -340,12 +341,13 @@ class FdmnesXasInput:
         return outdir
 
 
-
-def struct2fdmnes(inp: Union[str, Path], absorber:
-                  Union[str, int, Element],
-                  frame: int = 0,
-                  format: str = 'cif',
-                  filename: Union[None, str] = None) -> dict:
+def struct2fdmnes(
+    inp: Union[str, Path],
+    absorber: Union[str, int, Element],
+    frame: int = 0,
+    format: str = "cif",
+    filename: Union[None, str] = None,
+) -> dict:
     """convert CIF/XYZ  into a dictionary of {name: text} for FDMNES output files
 
     Parameters
@@ -363,8 +365,8 @@ def struct2fdmnes(inp: Union[str, Path], absorber:
 
     Returns
     -------
-    XasStructure
-        The XAS structure group for the specified file and absorber.
+    dict
+        Dictionary with the FDMNES input
 
     """
     if len(inp) < 512 and Path(inp).exists():
@@ -372,16 +374,16 @@ def struct2fdmnes(inp: Union[str, Path], absorber:
             filename = Path(inp).absolute().as_posix()
         inp = read_textfile(inp)
     if filename is None:
-        filename = f'unknown.{format}'
+        filename = f"unknown.{format}"
 
     if isinstance(absorber, str):
         absorber = Element(absorber)
     elif isinstance(absorber, int):
         absorber = Element.from_Z(absorber)
 
-    structs = get_structure_from_text(inp, absorber, frame=frame, format=format,
-                                      filename=filename)
+    structs = get_structure_from_text(
+        inp, absorber, frame=frame, format=format, filename=filename
+    )
     fout_name = f"{filename.replace('.', '_')}_{absorber.symbol}.inp"
     fdm = FdmnesXasInput(structs, absorber=absorber)
-    return {'fdmfile.txt': f'1\n{fout_name}\n',
-            fout_name: fdm.get_input()}
+    return {"fdmfile.txt": f"1\n{fout_name}\n", fout_name: fdm.get_input()}
