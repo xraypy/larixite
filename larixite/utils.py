@@ -18,18 +18,6 @@ try:
 except ImportError:
     getpwnam = None
 
-HAS_IPYTHON = False
-try:
-    from IPython.core.interactiveshell import InteractiveShell
-
-    HAS_IPYTHON = True
-except ImportError:
-    pass
-
-# Enable color output in Jupyter Notebook
-if HAS_IPYTHON:
-    InteractiveShell.ast_node_interactivity = "all"
-
 
 def get_homedir() -> Path:
     """
