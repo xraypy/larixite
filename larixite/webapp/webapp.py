@@ -206,17 +206,18 @@ def cifs(cifid=None):
             with_h = request.form.get('with_h') in ('1', 'on', 'True', 1, True)
             config['with_h'] = with_h = int(with_h)
             if config['ciftext'] is not None:
-                out = struct2fdmnes(config['ciftext'], absorber=absorber,
-                                        filename=f'AMSCD_{cifid}.cif')
                 cifid = config['cifid']
                 if config['ciffile'] not in ('', None, 'None'):
-                    cifid = config['ciffile']
+                    cifid = ciffile = config['ciffile']
                 elif config['cifid'] is not None:
                     cifid = config['cifid']
+                    ciffile = f'AMSCD_{cifid}.cif'
                     config['cif_link'] = (f'AMSCD_{cifid}.cif', cifid)
                     config['zip_link'] = (f'AMSCD_{cifid}_fdmnes.zip', cifid,
                                          absorber, edge, cluster_size, with_h, 'fdmnes')
                 config['out_links'] = {}
+                out = struct2fdmnes(config['ciftext'], absorber=absorber,
+                                        filename=ciffile)
                 for slabel, text in out.items():
                     link = f'fdmnes_{slabel}'
                     config['out_links'][slabel] = (slabel, cifid, absorber, edge, 0,
