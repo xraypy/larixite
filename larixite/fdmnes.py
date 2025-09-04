@@ -9,6 +9,7 @@ Generating FDMNES input files
 spectroscopy (XAS, XES, RIXS) from the atomic structures
 
 """
+
 from dataclasses import dataclass
 from typing import Union
 from pathlib import Path
@@ -60,8 +61,10 @@ class FdmnesXasInput:
     struct_type: Union[str, None] = None  #: type of the structure
     vmax: Union[float, None] = None  #: maximum potential value for molecules
     erange: str = "-20.0 0.1 70.0 1.0 100.0"  #: energy range
+    fileout_prefix: str = "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
     tmplpath: Union[str, Path, None] = None  #: path to the FDMNES input template
-    params: Union[dict, None] = None  #: parameters for FDMNES
+    params: Union[dict[str, bool], None] = None  #: enable/disable parameters for FDMNES
+    spacer : str = "   "  #: spacer for the FDMNES input text
 
     def __post_init__(self):
         """Validate and optimize attributes"""
@@ -213,17 +216,22 @@ class FdmnesXasInput:
         if "crys" in struct_type.lower():
             #: absorber
             structout.append("Z_absorber")
-            structout.append(f"   {self.absorber.Z}")
+            structout.append(f"{self.spacer}{self.absorber.Z}")
             #: space group
+            spgrp = self.xs.space_group
+            if spgrp == 1:  #: FDMNES doesn't recognize 1 as a space group -> `P1`
+                spgrp = "P1"
+            if spgrp == 2:  #: FDMNES doesn't recognize 2 as a space group -> `P-1`
+                spgrp = "P-1"
             structout.append("Spgroup")
-            structout.append(f"   {self.xs.space_group}")
+            structout.append(f"{self.spacer}{spgrp}")
             #: occupancy
             structout.append("Occupancy")
             #: crystal
             structout.append("Crystal")
             lattice = self.xs.sym_struct.lattice
             structout.append(
-                f"   {lattice.a} {lattice.b} {lattice.c} {lattice.alpha} {lattice.beta} {lattice.gamma}"
+                f"{self.spacer}{lattice.a} {lattice.b} {lattice.c} {lattice.alpha} {lattice.beta} {lattice.gamma}"
             )
             for (
                 idx,
@@ -256,14 +264,14 @@ class FdmnesXasInput:
             structout.append("   1")
             #: molecule
             structout.append("Molecule")
-            structout.append("   1.0 1.0 1.0 90.0 90.0 90.0")
+            structout.append(f"{self.spacer}1.0 1.0 1.0 90.0 90.0 90.0")
             for i, dist in sorted(map_mol_by_dist, key=lambda x: x[1]):
                 site = mol[i]
                 if not len(site.species) == 1:
                     raise NotImplementedError("TODO: partial site occupancy")
                 el = site.species.elements[0]
                 structout.append(
-                    f"  {el.Z:>3d} {site.x:15.10f} {site.y:15.10f} {site.z:15.10f} ! {site.label:>6s} {dist:10.5f} "
+                    f"{el.Z:>3d} {site.x:15.10f} {site.y:15.10f} {site.z:15.10f} ! {site.label:>6s} {dist:10.5f}"
                 )
         else:
             errmsg = f"Structure type `{struct_type}` not supported"
@@ -275,17 +283,18 @@ class FdmnesXasInput:
         """Get the vmax section of the input"""
         if self.vmax is not None:
             vmax = ["Vmax"]
-            vmax.append("   -6")
+            vmax.append(f"{self.spacer}-6")
             return "\n".join(vmax)
         else:
             return "! Vmax"
 
     def get_input(self, comment: str = "", struct_type: str = None) -> str:
+        """Get the FDMNES input text"""
         params = self.params.copy()
         template = open(self.tmplpath, "r").read()
 
         comment = (
-            f"   {self.xs.name}: {self.absorber.symbol} ({self.absorber.Z}) {self.edge} edge"
+            f"{self.spacer}{self.xs.name}: {self.absorber.symbol} ({self.absorber.Z}) {self.edge} edge"
             + comment
         )
         #: fill the template
@@ -297,9 +306,10 @@ class FdmnesXasInput:
             "version": vers,
             "pymatgen_version": pymatgen_version,
             "comment": comment,
-            "edge": self.edge,
-            "radius": f"{self.radius:.2f}",
-            "erange": self.erange,
+            "filout": self.spacer + self.fileout_prefix,
+            "edge": f"{self.spacer}{self.edge}",
+            "radius": f"{self.spacer}{self.radius:.2f}",
+            "erange": self.spacer + self.erange,
             "vmax": self.get_vmax(),
             "struct_type": self.struct_type,
             "structure": self.get_structure(struct_type=struct_type),
@@ -310,9 +320,8 @@ class FdmnesXasInput:
         return strict_ascii(template.format(**conf))
 
     def write_input(
-        self, inputtext: Union[str, None] = None, outdir: Union[str, Path, None] = None
-    ) -> None:
-        """Write the FDMNES input text to disk (as `job_inp.txt`) and return the output directory"""
+        self, inputtext: Union[str, None] = None, outdir: Union[str, Path, None] = None) -> Path:
+        """Write the FDMNES input text to disk and return the output directory"""
         if inputtext is None:
             inputtext = self.get_input()
         if outdir is None:
@@ -326,21 +335,23 @@ class FdmnesXasInput:
         if isinstance(outdir, str):
             outdir = Path(outdir)
         outdir.mkdir(parents=True, exist_ok=True)
-        fnout = outdir / "job_inp.txt"
+        fileout_name = f"{self.fileout_prefix}.inp"
+        fnout = outdir / fileout_name
         with open(fnout, "w") as fp:
             fp.write(inputtext)
         with open(outdir / "fdmfile.txt", "w") as fp:
-            fp.write("1\njob_inp.txt")
+            fp.write(f"1\n{fileout_name}\n")
         logger.info(f"written `{fnout}`")
         return outdir
 
 
-
-def struct2fdmnes(inp: Union[str, Path], absorber:
-                  Union[str, int, Element],
-                  frame: int = 0,
-                  format: str = 'cif',
-                  filename: Union[None, str] = None) -> dict:
+def struct2fdmnes(
+    inp: Union[str, Path],
+    absorber: Union[str, int, Element],
+    frame: int = 0,
+    format: str = "cif",
+    filename: Union[None, str] = None,
+) -> dict:
     """convert CIF/XYZ  into a dictionary of {name: text} for FDMNES output files
 
     Parameters
@@ -358,8 +369,8 @@ def struct2fdmnes(inp: Union[str, Path], absorber:
 
     Returns
     -------
-    XasStructure
-        The XAS structure group for the specified file and absorber.
+    dict
+        Dictionary with the FDMNES input
 
     """
     if len(inp) < 512 and Path(inp).exists():
@@ -367,16 +378,18 @@ def struct2fdmnes(inp: Union[str, Path], absorber:
             filename = Path(inp).absolute().as_posix()
         inp = read_textfile(inp)
     if filename is None:
-        filename = f'unknown.{format}'
+        filename = f"unknown.{format}"
 
     if isinstance(absorber, str):
         absorber = Element(absorber)
     elif isinstance(absorber, int):
         absorber = Element.from_Z(absorber)
 
-    structs = get_structure_from_text(inp, absorber, frame=frame, format=format,
-                                      filename=filename)
-    fout_name = f"{filename.replace('.', '_')}_{absorber.symbol}.inp"
-    fdm = FdmnesXasInput(structs, absorber=absorber)
-    return {'fdmfile.txt': f'1\n{fout_name}\n',
-            fout_name: fdm.get_input()}
+    structs = get_structure_from_text(
+        inp, absorber, frame=frame, format=format, filename=filename
+    )
+    fout_name = f"{filename.replace('.', '_')}_{absorber.symbol}"
+    fdm = FdmnesXasInput(structs, absorber=absorber, fileout_prefix=fout_name)
+    return {"fdmfile.txt": f"1\n{fout_name}.inp\n", fout_name: fdm.get_input()}
+
+

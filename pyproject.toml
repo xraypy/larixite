@@ -23,8 +23,9 @@ authors = [
 dependencies = [
     "xraydb",
     "sqlalchemy>=2",
-    "pymatgen>=2024.10.22",
-    "pyshortcuts",
+    "pymatgen>=2025.6.14",
+    "mp-api>=0.45.8",
+    "emmet-core>=0.84.9",
 ]
 
 license = "MIT"
@@ -47,7 +48,7 @@ Tracker = "https://github.com/xraypy/larixite/issues"
 
 [project.optional-dependencies]
 web = ["flask"]
-jupyter = ["jupyterlab==3.*", "crystal-toolkit==2025.1.24rc0"]
+jupyter = ["jupyterlab==3.*", "crystal-toolkit>=2025.7.31"]
 test = ["pytest"]
 doc = ["sphinx"]
 dev = ["build", "twine", "ruff"]
