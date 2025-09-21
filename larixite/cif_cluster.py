@@ -79,7 +79,7 @@ class CIF_Cluster():
 
     """
     def __init__(self, ciftext=None, filename=None, absorber=None,
-                 absorber_site=1, with_h=False, cluster_size=8.0):
+                 absorber_site=1, with_h=False, cluster_size=10.0):
         self.filename = filename
         self.ciftext = ciftext
         self.set_absorber(absorber)
@@ -238,9 +238,10 @@ class CIF_Cluster():
         self.molecule = Molecule(self.symbols, self.coords)
 
 
-def cif_cluster(ciftext=None, filename=None, absorber=None):
+def cif_cluster(ciftext=None, filename=None, absorber=None, cluster_size=10.0):
     "return list of sites for the structure"
-    return CIF_Cluster(ciftext=ciftext, filename=filename, absorber=absorber)
+    return CIF_Cluster(ciftext=ciftext, filename=filename,
+                       absorber=absorber, cluster_size=cluster_size)
 
 
 def cif_extra_titles(cifid):
@@ -319,11 +320,10 @@ def cif2feffinp(ciftext, absorber, template=None, edge=None, cluster_size=8.0,
     if template is None:
         template = open(Path(TEMPLATE_FOLDER, 'feff_exafs.tmpl'), 'r').read()
 
-    cluster = CIF_Cluster(ciftext=ciftext, absorber=absorber)
+    cluster = CIF_Cluster(ciftext=ciftext, absorber=absorber, cluster_size=cluster_size+0.5)
 
     if absorber_site is None:
         absorber_site = cluster.atom_sites[absorber][0]
-
     cluster.build_cluster(absorber_site=absorber_site, cluster_size=cluster_size)
 
     mol = cluster.molecule
@@ -412,8 +412,6 @@ def cif2feffinp(ciftext, absorber, template=None, edge=None, cluster_size=8.0,
     atoms = []
     for dist, x, y, z, ipot, sym, tag in sorted(at_lines, key=lambda x: x[0]):
         acount += 1
-        if acount > 500:
-            break
         sym = (sym + ' ')[:2]
         xyzi = f'  {x:+.5f}  {y:+.5f}  {z:+.5f} {ipot:2d}'.replace(' +', '  ')
         atoms.append(f'{xyzi}  {sym:>3s}  {dist:.5f}  * {tag:s}')
