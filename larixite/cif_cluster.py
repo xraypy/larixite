@@ -402,19 +402,20 @@ def cif2feffinp(ciftext, absorber, template=None, edge=None, cluster_size=8.0,
 
     # ipots
     ipot, z = 0, absorber_z
-    ipot_lines = [f'  {ipot:4d}  {z:>4d}   {absorber:>3s}']
+    ipot_lines = [f'  {ipot:4d}  {z:>4d}   {absorber:>3s}      -1     -1       0.01']
     for sym, ipot in ipot_map.items():
         z = atomic_number(sym)
-        ipot_lines.append(f'  {ipot:4d}  {z:>4d}   {sym:>3s}')
+        ipot_lines.append(f'  {ipot:4d}  {z:>4d}   {sym:>3s}      -1     -1')
 
     # ordered atoms list
     acount = 0
     atoms = []
     for dist, x, y, z, ipot, sym, tag in sorted(at_lines, key=lambda x: x[0]):
-        acount += 1
         sym = (sym + ' ')[:2]
-        xyzi = f'  {x:+.5f}  {y:+.5f}  {z:+.5f} {ipot:2d}'.replace(' +', '  ')
-        atoms.append(f'{xyzi}  {sym:>3s}  {dist:.5f}  * {tag:s}')
+        tag = (tag + '      ')[:7]
+        xyzi = f'  {x:+9.5f}  {y:+9.5f}  {z:+9.5f} {ipot:2d}'.replace(' +', '  ')
+        atoms.append(f'{xyzi}  {sym:>3s}  {dist:9.5f}  * {tag:s}  {acount:4d}')
+        acount += 1
 
 
     # now ready to write with template
