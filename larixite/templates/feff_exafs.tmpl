@@ -10,13 +10,16 @@
 EDGE      {edge}
 S02       1.0
 
-*         pot    xsph  fms   paths genfmt ff2chi
-CONTROL   1      1     1     1     1      1
-PRINT     1      0     0     0     0      3
+*         pot    xsph   fms    paths  genfmt ff2chi
+CONTROL   1      1      1      1      1      1
+PRINT     1      0      0      0      0      3
 
-*** ixc=0 means to use Hedin-Lundqvist
-*         ixc  [ Vr  Vi ]
-EXCHANGE  0
+** Exchange: energy-dependent exchange correlation potential
+** ixc = 0 means to use Hedin-Lundqvist, 1 to use Dirac-Hara
+** vr = added (real) energy shift
+** vi = added imaginary energy shift (broadening)
+*         ixc   vr  vi
+EXCHANGE  0     0.0  0.0
 
 RPATH     {radius}
 EXAFS     20
@@ -24,19 +27,41 @@ NLEG      6
 
 *  POLARIZATION  0 0 0
 
-*         r_scf  [ l_scf   n_scf   ca ]
+** SCF: self-consisent field for atomic potentials
+** r_scf = radius for self-consistent pots (2 shells is a good choice)
+** l_scf = 0 for a solid, 1 for a molecule
+** n_scf = max number of iterations to run. 0 for non-SCF, usually 10 is sufficient
+** ca = convergence factor (between 0 and 1). 1 is unstable, 0.2 is typical, lower values are more stable.
+**         r_scf  [ l_scf   n_scf   ca ]
 *SCF       5.0
 
-*         emin  emax   eimag
+** LDOS: local density of electronic states
+** emin, emax = energy range for DOS calculation, relative  to Ethreshold
+** eimag = imaginary energy for broadening
 *LDOS      -30   20     0.1
 
+** XANES: calculate XANES
+** kmax = upper limit of XANES calculation
+** delta_k = step in k [Ang^-1] to use
+** delta_e = step in energy [eV] to use.
+**         kmax   [ delta_k  delta_e ]
+* XANES     4.0
+
+** FMS: full multiple scattering
+** r_fms = radius for full multiple scattering
+** l_fms = 0 for a solid, 1 for a molecule
+**        r_fms  l_fms
+* FMS     4.0     0
 
 POTENTIALS
-*  ipot    z    tag
+** l_scf - max l (ang momentum number) for SCF calculation, -1 for 'auto'
+** l_fms - max l (ang momentum number) for FMS calculation, -1 for 'auto'
+** stoichiometry = number of atoms with this ipot in unit cell (use 0.01 for ipot 0)
+**  ipot    z    tag    l_scf  l_fms   stoichiometry
 {potentials}
 
 ATOMS
-*    x         y         z     ipot tag distance   site_info
+*     x          y          z     ipot tag   distance site_info  index
 {atoms}
 
 * END

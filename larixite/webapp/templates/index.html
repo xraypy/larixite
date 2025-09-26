@@ -101,7 +101,8 @@
       <tr>
         <td><label for="cluster_size">Cluster Size (Ang): </label></td><td>
             <input style="width: 100px;" type="number" id="cluster_size"
-                   name="cluster_size" value="{{ cluster_size }}" step=0.1>
+                   name="cluster_size" value="{{ cluster_size }}"
+                   step=0.1 min=2.0 max=40.0>
         </td>
         <td  colspan=2>  <input type="checkbox" id="with_h" name="with_h"
                                {% if with_h  %} checked="checked" {% endif %}       >
