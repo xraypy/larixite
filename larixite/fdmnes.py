@@ -61,10 +61,12 @@ class FdmnesXasInput:
     struct_type: Union[str, None] = None  #: type of the structure
     vmax: Union[float, None] = None  #: maximum potential value for molecules
     erange: str = "-20.0 0.1 70.0 1.0 100.0"  #: energy range
-    fileout_prefix: str = "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
+    fileout_prefix: str = (
+        "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
+    )
     tmplpath: Union[str, Path, None] = None  #: path to the FDMNES input template
     params: Union[dict[str, bool], None] = None  #: enable/disable parameters for FDMNES
-    spacer : str = "   "  #: spacer for the FDMNES input text
+    spacer: str = "   "  #: spacer for the FDMNES input text
 
     def __post_init__(self):
         """Validate and optimize attributes"""
@@ -320,7 +322,8 @@ class FdmnesXasInput:
         return strict_ascii(template.format(**conf))
 
     def write_input(
-        self, inputtext: Union[str, None] = None, outdir: Union[str, Path, None] = None) -> Path:
+        self, inputtext: Union[str, None] = None, outdir: Union[str, Path, None] = None
+    ) -> Path:
         """Write the FDMNES input text to disk and return the output directory"""
         if inputtext is None:
             inputtext = self.get_input()
@@ -351,6 +354,8 @@ def struct2fdmnes(
     frame: int = 0,
     format: str = "cif",
     filename: Union[None, str] = None,
+    radius: float = 7,
+    edge: str | None = None,
 ) -> dict:
     """convert CIF/XYZ  into a dictionary of {name: text} for FDMNES output files
 
@@ -388,8 +393,14 @@ def struct2fdmnes(
     structs = get_structure_from_text(
         inp, absorber, frame=frame, format=format, filename=filename
     )
-    fout_name = f"{filename.replace('.', '_')}_{absorber.symbol}"
-    fdm = FdmnesXasInput(structs, absorber=absorber, fileout_prefix=fout_name)
-    return {"fdmfile.txt": f"1\n{fout_name}.inp\n", fout_name: fdm.get_input()}
-
-
+    fout_prefix = f"{filename.replace('.', '_')}_{absorber.symbol}"
+    fout_name = f"{fout_prefix}.inp"
+    fdm = FdmnesXasInput(
+        structs,
+        absorber=absorber,
+        frame=frame,
+        edge=edge,
+        radius=radius,
+        fileout_prefix=fout_prefix,
+    )
+    return {"fdmfile.txt": f"1\n{fout_name}\n", fout_name: fdm.get_input()}
