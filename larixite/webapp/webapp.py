@@ -217,7 +217,8 @@ def cifs(cifid=None):
                                          absorber, edge, cluster_size, with_h, 'fdmnes')
                 config['out_links'] = {}
                 out = struct2fdmnes(config['ciftext'], absorber=absorber,
-                                        filename=ciffile)
+                                    radius=float(cluster_size), edge=edge,
+                                    filename=ciffile)
                 for slabel, text in out.items():
                     link = f'fdmnes_{slabel}'
                     config['out_links'][slabel] = (slabel, cifid, absorber, edge, 0,
@@ -284,7 +285,8 @@ def zipfile(cifid=None, absorber=None, edge='K', cluster_size=7.0,
             zfile.writestr(oname, result)
     elif form == 'fdmnes':
         out = struct2fdmnes(config['ciftext'], absorber=absorber,
-                                filename=f'AMSCD_{cifid}.cif')
+                            radius=float(cluster_size), edge=edge,
+                            filename=f'AMSCD_{cifid}.cif')
         for key, val in out.items():
             zfile.writestr(key, val)
     zfile.close()
@@ -318,9 +320,10 @@ def output(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
                     with_h=with_h, absorber_site=int(site))
     elif form == 'fdmnes':
         xcifid = cifid.replace('.', '_')
-        oname = f'AMSCD_{xcifid}_{absorber}'
+        oname = f'AMSCD_{xcifid}.cif'
         out = struct2fdmnes(config['ciftext'], absorber=absorber,
-                            filename=f'AMSCD_{xcifid}')
+                            radius=float(cluster_size), edge=edge,
+                            filename=oname)
         if fname == 'fdmfile.txt':
             result = out.get(fname, None)
         else:
