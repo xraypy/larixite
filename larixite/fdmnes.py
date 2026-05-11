@@ -29,18 +29,19 @@ FDMNES_DEFAULT_PARAMS = {
     "Density": False,
     "Density_all": False,
     "Green": True,
+    "Polarize": False,   #: -> TODO
     "Memory_save": True,
     "Relativism": False,
     "Spinorbit": None,
     "SCF": False,
-    "SCFexc": False,
-    "SCFexcv": False,
-    "Screening": False,
-    "Full_atom": False,
+    "SCF_exc": False,
+    "Screening": False,  #: -> TODO
+    "Dilatorb": False,   #: -> TODO
     "TDDFT": False,
-    "PBE96": False,
+    "SpGr_atom": False,  #: `Full_atom` is by default since March 2026
+    "Hedin": False,      #: `PBE69` is by default since March 2026
     "Atom_conf": False,  #: preferred over `Atom` (permits to keep atomic number in the list of atoms) -> TODO
-    "COOP": False,
+    "COOP": False,       #: -> TODO
     "Convolution": True,
 }
 
@@ -60,7 +61,7 @@ class FdmnesXasInput:
     radius: float = 7  #: radius of the calculation
     struct_type: Union[str, None] = None  #: type of the structure
     vmax: Union[float, None] = None  #: maximum potential value for molecules
-    erange: str = "-20.0 0.1 70.0 1.0 100.0"  #: energy range
+    erange: str = "-10.0 0.25 60.0 1.0 100.0"  #: energy range
     fileout_prefix: str = (
         "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
     )
