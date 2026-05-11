@@ -11,7 +11,6 @@ spectroscopy (XAS, XES, RIXS) from the atomic structures
 """
 
 from dataclasses import dataclass
-from typing import Union
 from pathlib import Path
 from pymatgen.core import __version__ as pymatgen_version, Element, Molecule
 from larixite.struct import get_structure, get_structure_from_text
@@ -29,19 +28,19 @@ FDMNES_DEFAULT_PARAMS = {
     "Density": False,
     "Density_all": False,
     "Green": True,
-    "Polarize": False,   #: -> TODO
+    "Polarize": False,  #: -> TODO
     "Memory_save": True,
     "Relativism": False,
     "Spinorbit": None,
     "SCF": False,
     "SCF_exc": False,
     "Screening": False,  #: -> TODO
-    "Dilatorb": False,   #: -> TODO
+    "Dilatorb": False,  #: -> TODO
     "TDDFT": False,
     "SpGr_atom": False,  #: `Full_atom` is by default since March 2026
-    "Hedin": False,      #: `PBE69` is by default since March 2026
+    "Hedin": False,  #: `PBE69` is by default since March 2026
     "Atom_conf": False,  #: preferred over `Atom` (permits to keep atomic number in the list of atoms) -> TODO
-    "COOP": False,       #: -> TODO
+    "COOP": False,  #: -> TODO
     "Convolution": True,
 }
 
@@ -50,23 +49,21 @@ FDMNES_DEFAULT_PARAMS = {
 class FdmnesXasInput:
     """Input generator for a XAS calculation with FDMNES"""
 
-    structpath: Union[
-        str, Path, XasStructure
-    ]  #: path to the structural file or XasStructure
-    absorber: Union[
-        str, int, Element
-    ]  #: atomic symbol or number of the absorbing element
+    structpath: (
+        str | Path | XasStructure
+    )  #: path to the structural file or XasStructure
+    absorber: str | int | Element  #: atomic symbol or number of the absorbing element
     frame: int = 0  #: index of the frame inside the structure
-    edge: Union[str, None] = None  #: edge for calculation
+    edge: str | None = None  #: edge for calculation
     radius: float = 7  #: radius of the calculation
-    struct_type: Union[str, None] = None  #: type of the structure
-    vmax: Union[float, None] = None  #: maximum potential value for molecules
+    struct_type: str | None = None  #: type of the structure
+    vmax: float | None = None  #: maximum potential value for molecules
     erange: str = "-10.0 0.25 60.0 1.0 100.0"  #: energy range
     fileout_prefix: str = (
         "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
     )
-    tmplpath: Union[str, Path, None] = None  #: path to the FDMNES input template
-    params: Union[dict[str, bool], None] = None  #: enable/disable parameters for FDMNES
+    tmplpath: str | Path | None = None  #: path to the FDMNES input template
+    params: dict[str, bool] | None = None  #: enable/disable parameters for FDMNES
     spacer: str = "   "  #: spacer for the FDMNES input text
 
     def __post_init__(self):
@@ -181,7 +178,7 @@ class FdmnesXasInput:
 
         return params
 
-    def get_structure(self, struct_type: Union[str, None] = None) -> str:
+    def get_structure(self, struct_type: str | None = None) -> str:
         """Get the structure section of the input
 
         Parameters
@@ -323,7 +320,7 @@ class FdmnesXasInput:
         return strict_ascii(template.format(**conf))
 
     def write_input(
-        self, inputtext: Union[str, None] = None, outdir: Union[str, Path, None] = None
+        self, inputtext: str | None = None, outdir: str | Path | None = None
     ) -> Path:
         """Write the FDMNES input text to disk and return the output directory"""
         if inputtext is None:
@@ -350,11 +347,11 @@ class FdmnesXasInput:
 
 
 def struct2fdmnes(
-    inp: Union[str, Path],
-    absorber: Union[str, int, Element],
+    inp: str | Path,
+    absorber: str | int | Element,
     frame: int = 0,
     format: str = "cif",
-    filename: Union[None, str] = None,
+    filename: None | str = None,
     radius: float = 7,
     edge: str | None = None,
 ) -> dict:
