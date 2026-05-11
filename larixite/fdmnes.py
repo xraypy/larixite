@@ -22,17 +22,20 @@ logger = get_logger("larixite.fdmnes")
 
 TEMPLATE_FOLDER = Path(Path(__file__).parent, "templates")
 
-FDMNES_DEFAULT_PARAMS = {
+FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Energpho": False,
     "Quadrupole": False,
+    "Polarize": False,  #: -> TODO
     "Density": False,
     "Density_all": False,
     "Green": True,
-    "Polarize": False,  #: -> TODO
     "Memory_save": True,
     "Relativism": False,
-    "Spinorbit": None,
+    "Spinorbit": False,
     "SCF": False,
+    "R_self": False,  #: -> TODO
+    "N_self": False,  #: -> TODO
+    "P_self": False,  #: -> TODO
     "SCF_exc": False,
     "Screening": False,  #: -> TODO
     "Dilatorb": False,  #: -> TODO
@@ -51,9 +54,9 @@ class FdmnesXasInput:
 
     structpath: (
         str | Path | XasStructure
-    )  #: path to the structural file or XasStructure
+    )  #: str or path to the structural file, or directly the XasStructure object
     absorber: str | int | Element  #: atomic symbol or number of the absorbing element
-    frame: int = 0  #: index of the frame inside the structure
+    frame: int = 0  #: index of the frame inside the structure (e.g. for multi-frame XYZ files)
     edge: str | None = None  #: edge for calculation
     radius: float = 7  #: radius of the calculation
     struct_type: str | None = None  #: type of the structure
@@ -77,17 +80,17 @@ class FdmnesXasInput:
         if isinstance(self.structpath, str):
             self.structpath = Path(self.structpath)
         if isinstance(self.structpath, XasStructure):
-            self.xs = self.structpath
-            self.structpath = self.xs.filepath
+            self._xs = self.structpath
+            self.structpath = self._xs.filepath
         else:
-            self.xs = get_structure(self.structpath, absorber=self.absorber)
+            self._xs = get_structure(self.structpath, absorber=self.absorber)
         #: radius
         self.set_radius(self.radius)
         #: structure type
         if self.struct_type is None:
-            self.struct_type = self.xs.struct_type
+            self.struct_type = self._xs.struct_type
         else:
-            self.xs.struct_type = self.struct_type
+            self._xs.struct_type = self.struct_type
         #: template
         if self.tmplpath is None:
             self.tmplpath = Path(TEMPLATE_FOLDER, "fdmnes_xas.tmpl")
@@ -102,7 +105,7 @@ class FdmnesXasInput:
 
     def set_radius(self, value: float):
         self.radius = value
-        self.xs.radius = value
+        self._xs.radius = value
 
     def validate_edge(self):
         """Validates and adjusts the edge attribute"""
@@ -144,7 +147,7 @@ class FdmnesXasInput:
     def optimize_params(self) -> dict:
         """Optimize the given input parameters"""
         params = self.params.copy()
-        atoms_z = [species.Z for species in self.xs.struct.types_of_species]
+        atoms_z = [species.Z for species in self._xs.struct.types_of_species]
         abs_z = self.absorber.Z
         transition_metals = [range(21, 31), range(39, 49), range(57, 81)]
 
@@ -207,7 +210,7 @@ class FdmnesXasInput:
             self.optimize_params()
         else:
             struct_type = self.struct_type
-        if "crys" in struct_type.lower() and isinstance(self.xs.struct, Molecule):
+        if "crys" in struct_type.lower() and isinstance(self._xs.struct, Molecule):
             errmsg = "cannot generate a crystal input from a molecule -> use `struct_type='molecule'`"
             logger.error(errmsg)
             raise AttributeError(errmsg)
@@ -218,7 +221,7 @@ class FdmnesXasInput:
             structout.append("Z_absorber")
             structout.append(f"{self.spacer}{self.absorber.Z}")
             #: space group
-            spgrp = self.xs.space_group
+            spgrp = self._xs.space_group
             if spgrp == 1:  #: FDMNES doesn't recognize 1 as a space group -> `P1`
                 spgrp = "P1"
             if spgrp == 2:  #: FDMNES doesn't recognize 2 as a space group -> `P-1`
@@ -229,7 +232,7 @@ class FdmnesXasInput:
             structout.append("Occupancy")
             #: crystal
             structout.append("Crystal")
-            lattice = self.xs.sym_struct.lattice
+            lattice = self._xs.sym_struct.lattice
             structout.append(
                 f"{self.spacer}{lattice.a} {lattice.b} {lattice.c} {lattice.alpha} {lattice.beta} {lattice.gamma}"
             )
@@ -240,11 +243,11 @@ class FdmnesXasInput:
                 occupancy,
                 len_sites,
                 wyckoff,
-            ) in self.xs.unique_sites:
+            ) in self._xs.unique_sites:
                 zelems = [elem.Z for elem in site.species.elements]
                 if not len(set(zelems)) == 1:
                     logger.warning(
-                        f"[{self.xs.label}] site {idx} has species with different Z -> {site.species_string}"
+                        f"[{self._xs.label}] site {idx} has species with different Z -> {site.species_string}"
                     )
                 for elem, elstr in zip(
                     site.species.elements, site.species_string.split(", ")
@@ -253,7 +256,7 @@ class FdmnesXasInput:
                     structout.append(sitestr)
         elif "mol" in struct_type.lower():
             #: build the cluster and map by distance from absorber at (0,0,0)
-            mol = self.xs.cluster
+            mol = self._xs.cluster
             map_mol_by_dist = [(0, 0)]
             for i, site in enumerate(mol[1:]):
                 isite = i + 1
@@ -294,7 +297,7 @@ class FdmnesXasInput:
         template = open(self.tmplpath, "r").read()
 
         comment = (
-            f"{self.spacer}{self.xs.name}: {self.absorber.symbol} ({self.absorber.Z}) {self.edge} edge"
+            f"{self.spacer}{self._xs.name}: {self.absorber.symbol} ({self.absorber.Z}) {self.edge} edge"
             + comment
         )
         #: fill the template
@@ -329,7 +332,7 @@ class FdmnesXasInput:
             import tempfile
 
             outdir = (
-                Path(tempfile.gettempdir()) / "larixite" / "fdmnes" / str(self.xs.name)
+                Path(tempfile.gettempdir()) / "larixite" / "fdmnes" / str(self._xs.name)
             )
             outdir.mkdir(parents=True, exist_ok=True)
             outdir = tempfile.mkdtemp(dir=outdir, prefix="job_")
