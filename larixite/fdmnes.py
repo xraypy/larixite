@@ -33,9 +33,6 @@ FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Relativism": False,
     "Spinorbit": False,
     "SCF": False,
-    "R_self": False,  #: -> TODO
-    "N_self": False,  #: -> TODO
-    "P_self": False,  #: -> TODO
     "SCF_exc": False,
     "Screening": False,  #: -> TODO
     "Dilatorb": False,  #: -> TODO
@@ -61,12 +58,16 @@ class FdmnesXasInput:
     radius: float = 7  #: radius of the calculation
     struct_type: str | None = None  #: type of the structure
     vmax: float | None = None  #: maximum potential value for molecules
+    rself: float | None = None  #: radius for the SCF calculation
+    nself: int = 100  #: number of maximum iterations for the SCF calculation
+    pself: float = 0.025  #: initial weight for the SCF calculation
     erange: str = "-10.0 0.25 60.0 1.0 100.0"  #: energy range
     fileout_prefix: str = (
         "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
     )
     tmplpath: str | Path | None = None  #: path to the FDMNES input template
     params: dict[str, bool] | None = None  #: enable/disable parameters for FDMNES
+    optimize: bool = False  #: optimize the input parameters
     spacer: str = "   "  #: spacer for the FDMNES input text
 
     def __post_init__(self):
@@ -101,6 +102,7 @@ class FdmnesXasInput:
         #: optimize params
         if self.params is None:
             self.params = FDMNES_DEFAULT_PARAMS
+        if self.optimize:
             self.params = self.optimize_params()
 
     def set_radius(self, value: float):
@@ -166,18 +168,16 @@ class FdmnesXasInput:
                 "Spinorbit enabled. **NOTE**: the simulations are typically 4 to 8 times longer and need 2 times more memory space"
             )
 
-        if (8 in atoms_z) and (params["SCF"] is True):
-            """Sometimes, and specifically for oxides, it can be noted that SCF leads to solutions not
-            converging versus the cluster radius. One observes for instance a beating phenomenon
-            on the atomic charges, versus the number of atomic shells incoming in the calculation
-            area. This can be overcome by the use of the keyword "Full_atom" which suppress an
-            approximation, taking the cluster atoms equivalent by the space group symmetry
-            instead of the punctual group symmetry."""
-
-            params["Full_atom"] = True
-
         if "mol" in self.struct_type.lower():
             self.vmax = -6
+            logger.info(f"Vmax set to {self.vmax} for molecule")
+
+        if self.radius < 3.5:
+            self.rself = self.radius
+        else:
+            self.rself = 3.5
+        if params["SCF"]:
+            logger.info(f"R_self set to {self.rself} for radius {self.radius}")
 
         return params
 
@@ -283,13 +283,20 @@ class FdmnesXasInput:
         return "\n".join(structout)
 
     def get_vmax(self) -> str:
-        """Get the vmax section of the input"""
+        """Get the Vmax section of the input"""
         if self.vmax is not None:
             vmax = ["Vmax"]
             vmax.append(f"{self.spacer}-6")
             return "\n".join(vmax)
         else:
             return "! Vmax"
+
+    def get_rself(self):
+        """Get the R_self section of the input"""
+        if self.rself is not None:
+            return f"{self.spacer}{self.rself}"
+        else:
+            return "!"
 
     def get_input(self, comment: str = "", struct_type: str = None) -> str:
         """Get the FDMNES input text"""
@@ -314,6 +321,9 @@ class FdmnesXasInput:
             "radius": f"{self.spacer}{self.radius:.2f}",
             "erange": self.spacer + self.erange,
             "vmax": self.get_vmax(),
+            "rself": self.get_rself(),
+            "nself": f"{self.spacer}{self.nself}",
+            "pself": f"{self.spacer}{self.pself:.3f}",
             "struct_type": self.struct_type,
             "structure": self.get_structure(struct_type=struct_type),
         }
