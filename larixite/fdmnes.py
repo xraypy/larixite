@@ -87,6 +87,9 @@ class FdmnesXasInput:
             self._xs = get_structure(self.structpath, absorber=self.absorber)
         #: radius
         self.set_radius(self.radius)
+        #: R_self
+        if self.rself is None:
+            self.set_rself()
         #: structure type
         if self.struct_type is None:
             self.struct_type = self._xs.struct_type
@@ -108,6 +111,13 @@ class FdmnesXasInput:
     def set_radius(self, value: float):
         self.radius = value
         self._xs.radius = value
+
+    def set_rself(self):
+        if self.radius < 3.5:
+            self.rself = self.radius
+        else:
+            self.rself = 3.5
+        logger.info(f"R_self set to {self.rself} for radius {self.radius}")
 
     def validate_edge(self):
         """Validates and adjusts the edge attribute"""
@@ -171,13 +181,6 @@ class FdmnesXasInput:
         if "mol" in self.struct_type.lower():
             self.vmax = -6
             logger.info(f"Vmax set to {self.vmax} for molecule")
-
-        if self.radius < 3.5:
-            self.rself = self.radius
-        else:
-            self.rself = 3.5
-        if params["SCF"]:
-            logger.info(f"R_self set to {self.rself} for radius {self.radius}")
 
         return params
 
