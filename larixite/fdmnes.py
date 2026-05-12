@@ -53,22 +53,24 @@ class FdmnesXasInput:
         str | Path | XasStructure
     )  #: str or path to the structural file, or directly the XasStructure object
     absorber: str | int | Element  #: atomic symbol or number of the absorbing element
-    frame: int = 0  #: index of the frame inside the structure (e.g. for multi-frame XYZ files)
     edge: str | None = None  #: edge for calculation
-    radius: float = 7  #: radius of the calculation
     struct_type: str | None = None  #: type of the structure
-    vmax: float | None = None  #: maximum potential value for molecules
+    frame: int = (
+        0  #: index of the frame inside the structure (e.g. for multi-frame XYZ files)
+    )
+    radius: float = 7  #: radius of the calculation
+    erange: str = "-10.0 0.25 60.0 1.0 100.0"  #: energy range
     rself: float | None = None  #: radius for the SCF calculation
     nself: int = 100  #: number of maximum iterations for the SCF calculation
     pself: float = 0.025  #: initial weight for the SCF calculation
-    erange: str = "-10.0 0.25 60.0 1.0 100.0"  #: energy range
+    vmax: float | None = None  #: maximum potential value for molecules
     fileout_prefix: str = (
         "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
     )
     tmplpath: str | Path | None = None  #: path to the FDMNES input template
     params: dict[str, bool] | None = None  #: enable/disable parameters for FDMNES
     optimize: bool = False  #: optimize the input parameters
-    spacer: str = "   "  #: spacer for the FDMNES input text
+    spacer: str = "   "  #: spacer string for the FDMNES input text
 
     def __post_init__(self):
         """Validate and optimize attributes"""
@@ -102,11 +104,28 @@ class FdmnesXasInput:
             self.tmplpath = Path(self.tmplpath)
         #: absorption edge
         self.validate_edge()
-        #: optimize params
+        #: parameters
         if self.params is None:
             self.params = FDMNES_DEFAULT_PARAMS
+        #: optimize params
         if self.optimize:
             self.params = self.optimize_params()
+
+    @property
+    def green(self):
+        return self.params["Green"]
+
+    @green.setter
+    def green(self, val):
+        self.params["Green"] = val
+
+    @property
+    def scf(self):
+        return self.params["SCF"]
+
+    @scf.setter
+    def scf(self, val):
+        self.params["SCF"] = val
 
     def set_radius(self, value: float):
         self.radius = value
