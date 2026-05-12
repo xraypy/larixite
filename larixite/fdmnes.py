@@ -112,6 +112,10 @@ class FdmnesXasInput:
             self.params = self.optimize_params()
 
     @property
+    def xs(self):
+        return self._xs
+
+    @property
     def green(self):
         return self.params["Green"]
 
