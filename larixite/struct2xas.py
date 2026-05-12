@@ -1086,7 +1086,7 @@ class Struct2XAS:
             template = os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 "templates",
-                "feff_exafs.tmpl",
+                "feff_struct2xas_to_remove.tmpl",
             )
         assert os.path.isfile(template), "wrong template path"
 
