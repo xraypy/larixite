@@ -420,6 +420,7 @@ class FdmnesXasInput:
             logger.error("execute `write_input` first")
             return
         sbatchout = self.outdir / f"{self.fileout_prefix}.sbatch"
+        kwargs.update({"jobname": self.fileout_prefix})
         with open(sbatchout, "w") as fp, open(template) as tp:
             fp.write(tp.read().format(**kwargs))
             logger.info(f"written {fp.name}")
