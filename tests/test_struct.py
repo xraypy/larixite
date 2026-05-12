@@ -18,7 +18,8 @@ STRUCTS = Path(__file__).parent / "structs"
 
 @pytest.fixture(scope="module")
 def cif_zno():
-    return get_structure(STRUCTS / "ZnO_mp-2133.cif", "Zn")
+    with pytest.warns(UserWarning, match="fractional coordinates rounded"):
+        return get_structure(STRUCTS / "ZnO_mp-2133.cif", "Zn")
 
 
 @pytest.fixture(scope="module")
@@ -79,7 +80,8 @@ class TestCif:
         assert len(idxes) >= 1 and all("Zn" in cif_zno.get_site(i).species_string for i in idxes)
 
     def test_alt_absorber(self, cif_zno):
-        sg = get_structure(STRUCTS / "ZnO_mp-2133.cif", "O")
+        with pytest.warns(UserWarning, match="fractional coordinates rounded"):
+            sg = get_structure(STRUCTS / "ZnO_mp-2133.cif", "O")
         assert sg.absorber.symbol == "O" and len(sg.absorber_sites) >= 1
 
     def test_full_occupancy(self, cif_zno):
@@ -184,7 +186,8 @@ class TestFromText:
         return (STRUCTS / "CuO6_D4h.xyz").read_text()
 
     def test_cif(self, cif_text):
-        sg = get_structure_from_text(cif_text, "Zn", format="cif", filename="t.cif")
+        with pytest.warns(UserWarning, match="fractional coordinates rounded"):
+            sg = get_structure_from_text(cif_text, "Zn", format="cif", filename="t.cif")
         assert isinstance(sg, XasStructureCif) and sg.formula == "ZnO"
 
     def test_xyz(self, xyz_text):
@@ -192,7 +195,10 @@ class TestFromText:
         assert isinstance(sg, XasStructureXyz) and sg.struct_type == "molecule"
 
     def test_int_absorber(self, cif_text, xyz_text):
-        assert get_structure_from_text(cif_text, 30, format="cif", filename="t.cif").absorber.symbol == "Zn"
+        # CIF triggers pymatgen rounding warning
+        with pytest.warns(UserWarning, match="fractional coordinates rounded"):
+            result_cif = get_structure_from_text(cif_text, 30, format="cif", filename="t.cif")
+        assert result_cif.absorber.symbol == "Zn"
         assert get_structure_from_text(xyz_text, 29, format="xyz", filename="t.xyz").absorber.symbol == "Cu"
 
     def test_bad_format(self, cif_text):
@@ -209,8 +215,9 @@ class TestFromDir:
         assert len(s) == 1 and s[0].name == "Fe3O4_cub_fracOcc_Levy2012_ICSD-183969.cif"
 
     def test_cif_glob(self):
-        assert all(isinstance(x, XasStructureCif)
-                   for x in get_structs_from_dir(STRUCTS, "Zn", globstr="ZnO*"))
+        with pytest.warns(UserWarning, match="fractional coordinates rounded"):
+            structs = get_structs_from_dir(STRUCTS, "Zn", globstr="ZnO*")
+        assert all(isinstance(x, XasStructureCif) for x in structs)
 
     def test_xyz_glob(self):
         assert all(isinstance(x, XasStructureXyz)
