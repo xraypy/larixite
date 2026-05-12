@@ -67,7 +67,9 @@ class FdmnesXasInput:
     fileout_prefix: str = (
         "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
     )
-    tmplpath: str | Path | None = None  #: path to the FDMNES input template
+    tmplpath: str | Path | None = (
+        None  #: path to the templates directory (FDMNES inputs and sbatch)
+    )
     params: dict[str, bool] | None = None  #: enable/disable parameters for FDMNES
     optimize: bool = False  #: optimize the input parameters
     spacer: str = "   "  #: spacer string for the FDMNES input text
@@ -99,7 +101,7 @@ class FdmnesXasInput:
             self._xs.struct_type = self.struct_type
         #: template
         if self.tmplpath is None:
-            self.tmplpath = Path(TEMPLATE_FOLDER, "fdmnes_xas.tmpl")
+            self.tmplpath = Path(TEMPLATE_FOLDER)
         if isinstance(self.tmplpath, str):
             self.tmplpath = Path(self.tmplpath)
         #: absorption edge
@@ -110,6 +112,8 @@ class FdmnesXasInput:
         #: optimize params
         if self.optimize:
             self.params = self.optimize_params()
+        #: set outdir to None before writing the input
+        self.outdir = None
 
     @property
     def xs(self):
@@ -324,10 +328,19 @@ class FdmnesXasInput:
         else:
             return "!"
 
-    def get_input(self, comment: str = "", struct_type: str = None) -> str:
+    def get_input(
+        self,
+        comment: str = "",
+        struct_type: str = None,
+        template: str | Path | None = None,
+    ) -> str:
         """Get the FDMNES input text"""
         params = self.params.copy()
-        template = open(self.tmplpath, "r").read()
+        if template is None:
+            template = self.tmplpath / "fdmnes_xas.tmpl"
+        if isinstance(template, str):
+            template = Path(template)
+        template_text = open(template, "r").read()
 
         comment = (
             f"{self.spacer}{self._xs.name}: {self.absorber.symbol} ({self.absorber.Z}) {self.edge} edge"
@@ -356,7 +369,7 @@ class FdmnesXasInput:
         for parkey, parval in params.items():
             conf[parkey] = str(parkey) if parval is True else f"! {parkey}"
 
-        return strict_ascii(template.format(**conf))
+        return strict_ascii(template_text.format(**conf))
 
     def write_input(
         self, inputtext: str | None = None, outdir: str | Path | None = None
@@ -382,7 +395,34 @@ class FdmnesXasInput:
         with open(outdir / "fdmfile.txt", "w") as fp:
             fp.write(f"1\n{fileout_name}\n")
         logger.info(f"written `{fnout}`")
+        self.outdir = outdir
         return outdir
+
+    def write_sbatch(self, template: str | Path | None = None, **kwargs):
+        """Generates a SBATCH file (SLURM workload manager) using a template
+
+        Arguments
+        ---------
+        template: str, Path or None
+            path to the SBATCH template file
+            if None, the default template will be used (`fdmnes_sbatch_esrf.tmpl`)
+        **kwargs
+            keyword arguments to be replaced in the template file
+
+        Returns
+        -------
+        None: writes `{self.fileout_prefix}.sbatch`
+
+        """
+        if template is None:
+            template = self.tmplpath / "fdmnes_sbatch_esrf.tmpl"
+        if self.outdir is None:
+            logger.error("execute `write_input` first")
+            return
+        sbatchout = self.outdir / f"{self.fileout_prefix}.sbatch"
+        with open(sbatchout, "w") as fp, open(template) as tp:
+            fp.write(tp.read().format(**kwargs))
+            logger.info(f"written {fp.name}")
 
 
 def struct2fdmnes(
