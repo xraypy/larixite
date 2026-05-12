@@ -29,14 +29,6 @@ from larch.io import read_ascii
 from larch.math.convolution1D import lin_gamma, conv
 
 try:
-    import pandas as pd
-    from pandas.io.formats.style import Styler
-
-    HAS_PANDAS = True
-except ImportError:
-    HAS_PANDAS = False
-
-try:
     import py3Dmol
 
     HAS_PY3DMOL = True
@@ -46,8 +38,8 @@ except ImportError:
 
 __author__ = ["Beatriz G. Foschiani", "Mauro Rovezzi"]
 __email__ = ["beatrizgfoschiani@gmail.com", "mauro.rovezzi@esrf.fr"]
-__credits__ = ["Jade Chongsathapornpong", "Marius Retegan"]
-__version__ = "2024.1.0"
+__credits__ = ["Jade Chongsathapornpong", "Marius Retegan", "Helen Engelhardt"]
+__version__ = "2026.1.0"
 
 
 # initialize the logger
@@ -72,30 +64,20 @@ def _pprint(matrix):
 
 
 def xyz2struct(molecule):
-    """Convert pymatgen molecule to dummy pymatgen structure"""
-
-    alat, blat, clat = 1, 1, 1
-
-    # Set the lattice dimensions in each direction
-    for i in range(len(molecule) - 1):
-        if molecule.cart_coords[i][0] > molecule.cart_coords[i + 1][0]:
-            alat = molecule.cart_coords[i][0]
-        if molecule.cart_coords[i][1] > molecule.cart_coords[i + 1][1]:
-            blat = molecule.cart_coords[i][1]
-        if molecule.cart_coords[i][2] > molecule.cart_coords[i + 1][2]:
-            clat = molecule.cart_coords[i][2]
-
-    # Set the lattice dimensions in each direction
+    """Convert pymatgen molecule to dummy pymatgen structure using vectorized calculation."""
+    # Ensure the coordinates are in a NumPy array
+    coords = np.array(molecule.cart_coords)
+    
+    # Compute maximum coordinate along each axis
+    alat, blat, clat = np.max(coords, axis=0)
+    
     lattice = Lattice.from_parameters(
         a=alat, b=blat, c=clat, alpha=90, beta=90, gamma=90
     )
-
+    
     # Create a list of species
     species = [Element(sym) for sym in molecule.species]
-
-    # Create a list of coordinates
-    coords = molecule.cart_coords
-
+    
     # Create the Structure object
     struct = Structure(lattice, species, coords, coords_are_cartesian=True)
     return struct
@@ -474,17 +456,9 @@ class Struct2XAS:
             "idx_in_struct",
         ]
         abs_sites = self.get_abs_sites()
-        if HAS_PANDAS:
-            df = pd.DataFrame(
-                abs_sites,
-                columns=header,
-            )
-            df = Styler(df).hide(axis="index")
-            return df
-        else:
-            matrix = [header]
-            matrix.extend(abs_sites)
-            _pprint(matrix)
+        matrix = [header]
+        matrix.extend(abs_sites)
+        _pprint(matrix)
 
     def get_atoms_from_abs(self, radius):
         """Get atoms in sphere from absorbing atom with certain radius"""
@@ -744,13 +718,9 @@ class Struct2XAS:
         )
         print(coord_sym)
         header = ["Element", "Distance"]
-        if HAS_PANDAS:
-            df = pd.DataFrame(data=elems_dist, columns=header)
-            return df
-        else:
-            matrix = [header]
-            matrix.extend(elems_dist)
-            _pprint(matrix)
+        matrix = [header]
+        matrix.extend(elems_dist)
+        _pprint(matrix)
 
     def make_cluster(self, radius):
         """Create a cluster with absorber atom site at the center.
@@ -942,7 +912,7 @@ class Struct2XAS:
                     np.allclose(unique_sites[i][0].coords, selected_site[4], atol=0.01)
                     is True
                 ):
-                    replacements["absorber"] = f"absorber\n{i+1}"
+                    replacements["absorber"] = f"absorber\n{i + 1}"
 
             # absorber = f"{absorber}"
             # replacements["absorber"] = f"Z_absorber\n{round(Element(elem).Z)}"
@@ -963,7 +933,7 @@ class Struct2XAS:
             absorber = f"{absorber}"
             for i in range(len(atoms)):
                 if np.allclose(atoms[i][1], [0, 0, 0], atol=0.01) is True:
-                    replacements["absorber"] = f"absorber\n{i+1}"
+                    replacements["absorber"] = f"absorber\n{i + 1}"
 
             replacements["group"] = ""
 
@@ -1029,6 +999,7 @@ class Struct2XAS:
         edge: str = "K",
         sig2: Union[float, None] = None,
         debye: Union[List[float], None] = None,
+        feff_print: Union[List[int], None] = None,
         **kwargs,
     ):
         """
@@ -1056,6 +1027,11 @@ class Struct2XAS:
                     temperature at which the Debye-Waller factors are calculated [Kelvin].
                 debye_temperature : float
                     Debye Temperature of the material [Kelvin].
+        feff_print : list of six ints or None, [None]
+            PRINT card values controlling output verbosity for each FEFF module:
+            [pot, xsph, fms, paths, genfmt, ff2chi]
+            Values: 0=minimal, 1=standard, 2+=verbose
+            If None, defaults to [1, 0, 0, 0, 0, 3] (matches structure2feff.py)
 
         ..note:: refer to [FEFF documentation](https://feff.phys.washington.edu/feffproject-feff-documentation.html)
 
@@ -1123,6 +1099,10 @@ class Struct2XAS:
         else:
             use_debye = ""
             temperature, debye_temperature = debye[0], debye[1]
+
+        # Default PRINT values match structure2feff.py behavior
+        if feff_print is None:
+            feff_print = [1, 0, 0, 0, 0, 3]
 
         feff_comment = f"{feff_comment}"
         edge = f"{edge}"
@@ -1210,7 +1190,7 @@ class Struct2XAS:
         for i in range(len(at)):
             if self.full_occupancy:
                 atoms += "\n" + (
-                    f"{at[i][0][0]:10.6f} {at[i][0][1]:10.6f} {at[i][0][2]:10.6f} {  int(at[i][1])}  {at[i][2]:>5} {at[i][3]:10.5f}         *1 "
+                    f"{at[i][0][0]:10.6f} {at[i][0][1]:10.6f} {at[i][0][2]:10.6f} {int(at[i][1])}  {at[i][2]:>5} {at[i][3]:10.5f}         *1 "
                 )
             else:
                 choice = np.random.choice(
@@ -1233,6 +1213,12 @@ class Struct2XAS:
         replacements["potentials"] = potentials
         replacements["atoms"] = atoms
         replacements["title"] = title
+        replacements["print_pot"] = feff_print[0]
+        replacements["print_xsph"] = feff_print[1]
+        replacements["print_fms"] = feff_print[2]
+        replacements["print_paths"] = feff_print[3]
+        replacements["print_genfmt"] = feff_print[4]
+        replacements["print_ff2chi"] = feff_print[5]
         # replacements[""] =
 
         try:
