@@ -22,12 +22,12 @@ class XasStructureCif(XasStructure):
 
     @property
     def sga(self):
-        return SpacegroupAnalyzer(self.struct)
+        return SpacegroupAnalyzer(self.struct, symprec=0.01, angle_tolerance=5)
 
     @property
     def space_group(self):
         sd = self.sga.get_symmetry_dataset()
-        #spg = sd.international
+        # spg = sd.international
         spg = sd.number
         if sd.choice != "":
             return f"{spg}:{sd.choice}"
