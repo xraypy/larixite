@@ -3,6 +3,12 @@
 
 """
 Struct2XAS: convert CIFs and XYZs files to FDMNES and FEFF inputs
+
+
+/!\ DEPRECATED /!\
+THIS MODULE WILL BE REMOVED IN FUTURE VERSIONS
+-> USE larixite.struct or larixite.fdmnes
+/!\ DEPRECATED /!\
 """
 
 # main imports
@@ -802,6 +808,7 @@ class Struct2XAS:
           ||||||+ job{njob}
 
         """
+        logger.warning("`make_input_fdmnes` is deprecated, use `larixite.fdmnes` instead")
         if parent_path is None:
             parent_path = self.parent_path
 
@@ -831,7 +838,7 @@ class Struct2XAS:
 
         if template is None:
             template = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), "templates", "fdmnes.tmpl"
+                os.path.dirname(os.path.realpath(__file__)), "templates", "fdmnes_struct2xas_to_remove.tmpl"
             )
         assert os.path.isfile(template), "wrong template path"
 
