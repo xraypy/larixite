@@ -144,7 +144,7 @@ class FdmnesXasInput:
             self.rself = self.radius
         else:
             self.rself = 3.5
-        logger.info(f"R_self set to {self.rself} for radius {self.radius}")
+        logger.debug(f"R_self set to {self.rself} for radius {self.radius}")
 
     def validate_edge(self):
         """Validates and adjusts the edge attribute"""
