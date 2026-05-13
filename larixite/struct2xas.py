@@ -28,8 +28,7 @@ from pymatgen.io.xyz import XYZ
 from pymatgen.io.cif import CifParser
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-import larixite.utils.logging as logging
-from larixite.utils import mkdir, unixpath
+from larixite.utils import mkdir, unixpath, get_logger
 
 #from larch.site_config import user_larchdir
 #from larch.io import read_ascii
@@ -52,7 +51,7 @@ __version__ = "2026.1.0"
 
 
 # initialize the logger
-logger = logging.getLogger("struct2xas", level="INFO")
+logger = get_logger("struct2xas", level="INFO")
 
 
 def _get_timestamp() -> str:
