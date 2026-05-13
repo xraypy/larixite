@@ -27,9 +27,11 @@ jobs:
           channel-priority: true
           activate-environment: anaconda-client-env
           python-version: ${{ matrix.python-version }}
+          auto-activate-base: false
       - name: Install larixite and dependencies with pip
         run: |
-          pip install ".[all]"
+          python -m pip install --upgrade pip
+          python -m pip install ".[all]"
       - name: Run test suite
         run: |
           python -m pytest --cov=larixite --cov-report=xml
