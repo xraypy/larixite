@@ -15,6 +15,7 @@ THIS MODULE WILL BE REMOVED IN FUTURE VERSIONS
 import os
 import json
 import time
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Union, List  # , Any, Dict
 
@@ -27,12 +28,14 @@ from pymatgen.io.xyz import XYZ
 from pymatgen.io.cif import CifParser
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-import larch.utils.logging as logging
-from larch.utils import mkdir, unixpath
+import larixite.utils.logging as logging
+from larixite.utils import mkdir, unixpath
 
-from larch.site_config import user_larchdir
-from larch.io import read_ascii
-from larch.math.convolution1D import lin_gamma, conv
+#from larch.site_config import user_larchdir
+#from larch.io import read_ascii
+#from larch.math.convolution1D import lin_gamma, conv
+
+user_larchdir = Path.home() / ".larch"
 
 try:
     import py3Dmol
@@ -1379,67 +1382,67 @@ class Struct2XAS:
             # print("Label:\n", color_elems)
 
 
-def get_fdmnes_info(file, labels=("energy", "mu")):
-    """Get info from the fdmnes output file such as edge energy, atomic number Z,
-      and fermi level energy, and returns a group with the storage information
+# def get_fdmnes_info(file, labels=("energy", "mu")):
+#     """Get info from the fdmnes output file such as edge energy, atomic number Z,
+#       and fermi level energy, and returns a group with the storage information
 
-      Parameters:
+#       Parameters:
 
-        file (str): path to the fdmnes output file.
-    Obs: The INPUT file must have the "Header" keyword to use this function in the OUTPUT file
+#         file (str): path to the fdmnes output file.
+#     Obs: The INPUT file must have the "Header" keyword to use this function in the OUTPUT file
 
-    """
-    group = read_ascii(file, labels=labels)
+#     """
+#     group = read_ascii(file, labels=labels)
 
-    with open(group.path) as f:
-        line = f.readlines()[3]
-        header = line.split()
-        (
-            e_edge,
-            Z,
-            e_fermi,
-        ) = (float(header[0]), float(header[1]), float(header[6]))
-        print(
-            f"Calculated Fermi level: {e_fermi}\nAtomic_number: {Z}\nEnergy_edge: {e_edge}"
-        )
+#     with open(group.path) as f:
+#         line = f.readlines()[3]
+#         header = line.split()
+#         (
+#             e_edge,
+#             Z,
+#             e_fermi,
+#         ) = (float(header[0]), float(header[1]), float(header[6]))
+#         print(
+#             f"Calculated Fermi level: {e_fermi}\nAtomic_number: {Z}\nEnergy_edge: {e_edge}"
+#         )
 
-    group.e_edge = e_edge
-    group.Z = Z
-    group.e_fermi = e_fermi
+#     group.e_edge = e_edge
+#     group.Z = Z
+#     group.e_fermi = e_fermi
 
-    return group
+#     return group
 
 
-def convolve_data(
-    energy, mu, group, fwhm=1, linbroad=[1.5, 0, 50], kernel="gaussian", efermi=None
-):
-    """
-    Function for manual convolution using Convolution1D from larch and returning a group
+# def convolve_data(
+#     energy, mu, group, fwhm=1, linbroad=[1.5, 0, 50], kernel="gaussian", efermi=None
+# ):
+#     """
+#     Function for manual convolution using Convolution1D from larch and returning a group
 
-    Generic discrete convolution
+#     Generic discrete convolution
 
-    Description
-    -----------
+#     Description
+#     -----------
 
-    This is a manual (not optimized!) implementation of discrete 1D
-    convolution intended for spectroscopy analysis. The difference with
-    commonly used methods is the possibility to adapt the convolution
-    kernel for each convolution point, e.g. change the FWHM of the
-    Gaussian kernel as a function of the energy scale.
+#     This is a manual (not optimized!) implementation of discrete 1D
+#     convolution intended for spectroscopy analysis. The difference with
+#     commonly used methods is the possibility to adapt the convolution
+#     kernel for each convolution point, e.g. change the FWHM of the
+#     Gaussian kernel as a function of the energy scale.
 
-    Resources
-    ---------
+#     Resources
+#     ---------
 
-    .. [WPconv] <http://en.wikipedia.org/wiki/Convolution#Discrete_convolution>
-    .. [Fisher] <http://homepages.inf.ed.ac.uk/rbf/HIPR2/convolve.htm>
-    .. [GP1202] <http://glowingpython.blogspot.fr/2012/02/convolution-with-numpy.html>
+#     .. [WPconv] <http://en.wikipedia.org/wiki/Convolution#Discrete_convolution>
+#     .. [Fisher] <http://homepages.inf.ed.ac.uk/rbf/HIPR2/convolve.htm>
+#     .. [GP1202] <http://glowingpython.blogspot.fr/2012/02/convolution-with-numpy.html>
 
-    """
+#     """
 
-    gamma_e = lin_gamma(energy, fwhm=fwhm, linbroad=linbroad)
-    mu_conv = conv(energy, mu, kernel=kernel, fwhm_e=gamma_e, efermi=efermi)
-    group.conv = mu_conv
-    return group
+#     gamma_e = lin_gamma(energy, fwhm=fwhm, linbroad=linbroad)
+#     mu_conv = conv(energy, mu, kernel=kernel, fwhm_e=gamma_e, efermi=efermi)
+#     group.conv = mu_conv
+#     return group
 
 
 def save_cif_from_mp(
