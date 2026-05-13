@@ -27,10 +27,6 @@ jobs:
           channel-priority: true
           activate-environment: anaconda-client-env
           python-version: ${{ matrix.python-version }}
-      - name: Install conda dependencies
-        run: |
-          printenv
-          conda install -y -c conda-forge python=${{ matrix.python-version }} "numpy>=2.0" scipy pytest pytest-cov coverage requests
       - name: Install larixite and dependencies with pip
         run: |
           pip install ".[dev,test,doc]"
