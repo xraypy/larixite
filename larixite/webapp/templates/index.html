@@ -98,32 +98,50 @@
             {% endfor %}
         </td>
       </tr>
-       <tr>
-         <td><label for="cluster_size">Cluster Size (Ang): </label></td><td>
-             <input style="width: 100px;" type="number" id="cluster_size"
-                    name="cluster_size" value="{{ cluster_size }}"
-                    step=0.1 min=2.0 max=40.0>
-         </td>
-         <td  colspan=2>  <input type="checkbox" id="with_h" name="with_h"
-                                {% if with_h  %} checked="checked" {% endif %}       >
-           <label for="with_h">Include H atoms</label> </td>
+        <tr>
+          <td><label for="cluster_size">Cluster Size (Ang): </label></td><td>
+              <input style="width: 100px;" type="number" id="cluster_size"
+                     name="cluster_size" value="{{ cluster_size }}"
+                     step=0.1 min=2.0 max=40.0>
+          </td>
+          <td  colspan=2>  <input type="checkbox" id="with_h" name="with_h"
+                                 {% if with_h  %} checked="checked" {% endif %}       >
+            <label for="with_h">Include H atoms</label> </td>
 
-       </tr>
-       <tr>
-         <td colspan=4>  <input type="checkbox" id="optimize" name="optimize"
-                                {% if optimize  %} checked="checked" {% endif %}       >
-           <label for="optimize">Optimize FDMNES input parameters (= more accurate but slower calculation)</label> </td>
+        </tr>
+      </table>
 
-       </tr>
-      <tr>
-        <td colspan=2>
-          <input type="submit" name="feff" value="Generate Feff Inputs">
-        </td>
-        <td colspan=2>
-          <input type="submit" name="fdmnes" value="Generate FDMNES Input">
-        </td>
-      </tr>
-    </table>
+      <hr>
+      <table cellpadding=2 border=0>
+        <tr>
+          <td style="font-weight: bold;">FEFF</td>
+
+        </tr>
+        <tr>
+          <td>
+            <input type="submit" name="feff" value="Generate Feff Input">
+          </td>
+        </tr>
+      </table>
+
+      <hr>
+      <table cellpadding=2 border=0>
+        <tr>
+          <td style="font-weight: bold;">FDMNES</td>
+
+        </tr>
+        <tr>
+          <td>  <input type="checkbox" id="optimize" name="optimize"
+                                 {% if optimize  %} checked="checked" {% endif %}       >
+            <label for="optimize">Optimize input parameters (= more accurate but slower calculation)</label> </td>
+
+        </tr>
+        <tr>
+          <td>
+            <input type="submit" name="fdmnes" value="Generate FDMNES Input">
+          </td>
+        </tr>
+      </table>
 
     <hr>
      CIF Text:<p><pre>{{ciftext|safe}}</pre>
