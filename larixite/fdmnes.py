@@ -212,7 +212,7 @@ class FdmnesXasInput:
         #enable SCF
         params["SCF"] = True
         logger.info("SCF enabled")
-        
+
         return params
 
     def get_structure(self, struct_type: str | None = None) -> str:
@@ -440,6 +440,7 @@ def struct2fdmnes(
     radius: float = 7,
     edge: str | None = None,
     optimize: bool = True,
+    green: bool = True,
 ) -> dict:
     """convert CIF/XYZ  into a dictionary of {name: text} for FDMNES output files
 
@@ -457,6 +458,8 @@ def struct2fdmnes(
         full path to filename  ['unknown.{format}']
     optimize : bool
         optimize input parameters based on absorber and structure [True]
+    green : bool
+        use muffin-tin approximation [True]
 
     Returns
     -------
@@ -490,4 +493,5 @@ def struct2fdmnes(
         fileout_prefix=fout_prefix,
         optimize=optimize,
     )
+    fdm.green = green
     return {"fdmfile.txt": f"1\n{fout_name}\n", fout_name: fdm.get_input()}

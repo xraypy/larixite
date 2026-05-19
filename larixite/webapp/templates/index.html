@@ -125,23 +125,29 @@
       </table>
 
       <hr>
-      <table cellpadding=2 border=0>
-        <tr>
-          <td style="font-weight: bold;">FDMNES</td>
+       <table cellpadding=2 border=0>
+         <tr>
+           <td style="font-weight: bold;">FDMNES</td>
 
-        </tr>
-        <tr>
-          <td>  <input type="checkbox" id="optimize" name="optimize"
-                                 {% if optimize  %} checked="checked" {% endif %}       >
-            <label for="optimize">Optimize input parameters (= more accurate but slower calculation)</label> </td>
+         </tr>
+         <tr>
+           <td>  <input type="checkbox" id="green" name="green"
+                                  {% if green  %} checked="checked" {% endif %}       >
+             <label for="green">Use Green formalism on a muffin-tin potential (= less accurate but faster calculation)</label> </td>
 
-        </tr>
-        <tr>
-          <td>
-            <input type="submit" name="fdmnes" value="Generate FDMNES Input">
-          </td>
-        </tr>
-      </table>
+         </tr>
+         <tr>
+           <td>  <input type="checkbox" id="optimize" name="optimize"
+                                  {% if optimize  %} checked="checked" {% endif %}       >
+             <label for="optimize">Optimize input parameters (= more accurate but slower calculation)</label> </td>
+
+         </tr>
+         <tr>
+           <td>
+             <input type="submit" name="fdmnes" value="Generate FDMNES Input">
+           </td>
+         </tr>
+       </table>
 
     <hr>
      CIF Text:<p><pre>{{ciftext|safe}}</pre>
@@ -159,7 +165,7 @@
               <td><a href="{{url_for('zipfile', cifid=zip_link[1],
               absorber=zip_link[2],  edge=zip_link[3],
               cluster_size=zip_link[4], with_h=zip_link[5],
-              form=zip_link[6], optimize=zip_link[7], fname=zip_link[0]) }}"> {{  zip_link[0] }} </a></td>
+              form=zip_link[6], optimize=zip_link[7], green=zip_link[8], fname=zip_link[0]) }}"> {{  zip_link[0] }} </a></td>
               <td> &nbsp;  Zip File, all outputs </td>
             </tr>
          {% endif %}
@@ -174,10 +180,10 @@
          {% if out_links: %}
          {% for link, data in out_links.items() %}
            <tr class={{ loop.cycle('even', 'odd') }}>
-            <td><a href="{{url_for('output', cifid=data[1],
-              absorber=data[2],  edge=data[3], site=data[4],
-              cluster_size=data[5], with_h=data[6], form=data[7],
-              optimize=data[8], fname=link )}}">{{ link }}</a></td>
+             <td><a href="{{url_for('output', cifid=data[1],
+               absorber=data[2],  edge=data[3], site=data[4],
+               cluster_size=data[5], with_h=data[6], form=data[7],
+               optimize=data[8], green=data[9], fname=link )}}">{{ link }}</a></td>
              <td> &nbsp;  {{ data[0] }} </td>
            </tr>
          {% endfor %}

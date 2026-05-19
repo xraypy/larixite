@@ -14,17 +14,21 @@ The versioning scheme followed is `YYYY.MAJOR.MINOR`:
 
 ## [2026.1.0 - not released yet]
 
+### web application
+
+    - Separate FEFF and FDMNES sections for XAS input generation
+    - FDMNES: added optimization checkbox
+    - FDMNES: added Green formalism checkbox
+    - Added more tests
+
 ### `fdmnes`
 
-- Update to FDMNES version March 2026
-- Add `make_sbatch` with a template for the ESRF SLURM scheduler
-- Add `optimize : bool = False` option in `FdmnesXasInput` class to control if
-  the input parameters are optimized (= more accurate calcuation, but slower) or
-  not
-- Add FDMNES optimization checkbox in the Web application
-- Added more tests
+    - Update to FDMNES version March 2026
+    - Add `make_sbatch` with a template for the ESRF SLURM scheduler
+    - Add `optimize : bool = False` option in `FdmnesXasInput` class to control if the input parameters are optimized (= more accurate calcuation, but slower) or not
 
 ### `struc2xas`
 
-- Fully migrated from `larch.xrd.struc2xas` (and removed there)
-- Make `struc2xas` *deprecated* and start refactoring
+    - Fully migrated from `larch.xrd.struc2xas` (and removed there)
+    - Make `struc2xas` *deprecated* and start refactoring
+  

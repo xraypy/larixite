@@ -52,6 +52,7 @@ def connect(session, clear=False, cifid=None):
     if config is None or clear:
         config = {'cifdict': {},
                   'with_h': 0,
+                  'green': True,
                   'optimize': False,
                   'edges': ['K', 'L3', 'L2', 'L1', 'M5', 'M4', 'M3'],
                   'cluster_size': 7.0,
@@ -192,12 +193,12 @@ def cifs(cifid=None):
                     cifid = config['cifid']
                     config['cif_link'] = (f'AMSCD_{cifid}.cif', cifid)
                     config['zip_link'] = (f'AMSCD_{cifid}_feff.zip', cifid,
-                                          absorber, edge, cluster_size, with_h, 'feff', 0)
+                                          absorber, edge, cluster_size, with_h, 'feff', 0, 0)
                 config['out_links'] = {}
                 for slabel, sindex in config['all_sites'][absorber].items():
                     link = f'feff_{cifid}_{absorber}{sindex}_{edge}.inp'
                     config['out_links'][link] = (slabel, cifid, absorber, edge, sindex,
-                                                  cluster_size, with_h, 'feff', 0)
+                                                  cluster_size, with_h, 'feff', 0, 0)
 
 
         elif 'fdmnes' in request.form.keys():
@@ -206,6 +207,8 @@ def cifs(cifid=None):
             config['cluster_size'] = cluster_size = request.form.get('cluster_size')
             with_h = request.form.get('with_h') in ('1', 'on', 'True', 1, True)
             config['with_h'] = with_h = int(with_h)
+            green = request.form.get('green') in ('1', 'on', 'True', 1, True)
+            config['green'] = green
             optimize = request.form.get('optimize') in ('1', 'on', 'True', 1, True)
             config['optimize'] = optimize
             if config['ciftext'] is not None:
@@ -217,15 +220,15 @@ def cifs(cifid=None):
                     ciffile = f'AMSCD_{cifid}.cif'
                     config['cif_link'] = (f'AMSCD_{cifid}.cif', cifid)
                     config['zip_link'] = (f'AMSCD_{cifid}_fdmnes.zip', cifid,
-                                          absorber, edge, cluster_size, with_h, 'fdmnes', optimize)
+                                          absorber, edge, cluster_size, with_h, 'fdmnes', optimize, green)
                 config['out_links'] = {}
                 out = struct2fdmnes(config['ciftext'], absorber=absorber,
                                     radius=float(cluster_size), edge=edge,
-                                    filename=ciffile, optimize=optimize)
+                                    filename=ciffile, optimize=optimize, green=green)
                 for slabel, text in out.items():
                     link = f'fdmnes_{slabel}'
                     config['out_links'][slabel] = (slabel, cifid, absorber, edge, 0,
-                                                   cluster_size, with_h, 'fdmnes', optimize)
+                                                   cluster_size, with_h, 'fdmnes', optimize, green)
 
     return render_template('index.html', **config)
 
@@ -258,9 +261,9 @@ def get_elements(absorber):
     return stoich, absorber
 
 
-@app.route('/zipfile/<cifid>/<absorber>/<edge>/<cluster_size>/<with_h>/<form>/<optimize>/<fname>')
+@app.route('/zipfile/<cifid>/<absorber>/<edge>/<cluster_size>/<with_h>/<form>/<optimize>/<green>/<fname>')
 def zipfile(cifid=None, absorber=None, edge='K', cluster_size=7.0,
-            with_h=False, form='feff', optimize=False, fname=None):
+            with_h=False, form='feff', optimize=False, green=False, fname=None):
     connect(session, cifid=cifid)
     global cifdb, config
     stoich, absorber = get_elements(absorber)
@@ -293,7 +296,8 @@ def zipfile(cifid=None, absorber=None, edge='K', cluster_size=7.0,
             optimize = 0
         out = struct2fdmnes(config['ciftext'], absorber=absorber,
                             radius=float(cluster_size), edge=edge,
-                            filename=f'AMSCD_{cifid}.cif', optimize=bool(optimize))
+                            filename=f'AMSCD_{cifid}.cif', optimize=bool(optimize),
+                            green=bool(green) if green else False)
         for key, val in out.items():
             zfile.writestr(key, val)
     zfile.close()
@@ -301,9 +305,9 @@ def zipfile(cifid=None, absorber=None, edge='K', cluster_size=7.0,
     return send_from_directory(tfolder, tfile, mimetype='application/zip',
                               as_attachment=True,  download_name=fname)
 
-@app.route('/output/<cifid>/<absorber>/<site>/<edge>/<cluster_size>/<with_h>/<form>/<optimize>/<fname>')
+@app.route('/output/<cifid>/<absorber>/<site>/<edge>/<cluster_size>/<with_h>/<form>/<optimize>/<green>/<fname>')
 def output(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
-            with_h=False, form='feff', optimize=False, fname=None):
+            with_h=False, form='feff', optimize=False, green=False, fname=None):
     connect(session, cifid=cifid)
     global cifdb, config
     stoich, absorber = get_elements(absorber)
@@ -325,6 +329,10 @@ def output(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
         optimize = 1
     else:
         optimize = 0
+    if green in ('1', 'on', 'True', 1, True):
+        green = 1
+    else:
+        green = 0
     if form =='feff':
         result = cif2feffinp(config['ciftext'], absorber, edge=edge,
                     cluster_size=float(cluster_size), cifid=xcifid,
@@ -334,7 +342,8 @@ def output(cifid=None, absorber=None, site=1, edge='K', cluster_size=7.0,
         oname = f'AMSCD_{xcifid}.cif'
         out = struct2fdmnes(config['ciftext'], absorber=absorber,
                             radius=float(cluster_size), edge=edge,
-                            filename=oname, optimize=bool(optimize))
+                            filename=oname, optimize=bool(optimize),
+                            green=bool(green))
         if fname == 'fdmfile.txt':
             result = out.get(fname, None)
         else:

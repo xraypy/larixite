@@ -118,7 +118,7 @@ class TestOutput:
 
     def test_feff_output_zn_k(self, client):
         self._setup(client)
-        rv = client.get("/output/test.cif/Zn/1/K/7.0/0/feff/0/feff.inp")
+        rv = client.get("/output/test.cif/Zn/1/K/7.0/0/feff/0/0/feff.inp")
         assert rv.status_code == 200
         data = rv.get_data(as_text=True)
         assert data.count("TITLE") >= 1 or data.count("*") > 0
@@ -126,19 +126,19 @@ class TestOutput:
 
     def test_feff_output_with_h(self, client):
         self._setup(client)
-        rv = client.get("/output/test.cif/Zn/1/K/7.0/1/feff/0/feff.inp")
+        rv = client.get("/output/test.cif/Zn/1/K/7.0/1/feff/0/0/feff.inp")
         assert rv.status_code == 200
 
     def test_fdmnes_output(self, client):
         self._setup(client)
-        rv = client.get("/output/test.cif/Zn/1/K/7.0/0/fdmnes/0/fdmfile.txt")
+        rv = client.get("/output/test.cif/Zn/1/K/7.0/0/fdmnes/0/0/fdmfile.txt")
         assert rv.status_code == 200
         data = rv.get_data(as_text=True)
         assert "1" in data or ".inp" in data
 
     def test_fdmnes_output_o_edge(self, client):
         self._setup(client)
-        rv = client.get("/output/test.cif/O/1/K/7.0/0/fdmnes/0/fdmfile.txt")
+        rv = client.get("/output/test.cif/O/1/K/7.0/0/fdmnes/0/0/fdmfile.txt")
         assert rv.status_code == 200
 
 
