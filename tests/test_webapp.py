@@ -155,12 +155,12 @@ class TestCiffile:
 class TestZipfile:
     def test_feff_zip(self, client):
         _upload(client, ZNO_TEXT)
-        rv = client.get("/zipfile/test.cif/Zn/K/7.0/0/feff/0/test_zoom")
+        rv = client.get("/zipfile/test.cif/Zn/K/7.0/0/feff/0/0/test_zoom")
         assert rv.status_code in (200, 500)
 
     def test_fdmnes_zip(self, client):
         _upload(client, ZNO_TEXT)
-        rv = client.get("/zipfile/test.cif/Zn/K/7.0/0/fdmnes/0/test_zoom")
+        rv = client.get("/zipfile/test.cif/Zn/K/7.0/0/fdmnes/0/1/test_zoom")
         assert rv.status_code in (200, 500)
 
 
