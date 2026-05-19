@@ -209,6 +209,10 @@ class FdmnesXasInput:
             self.vmax = -6
             logger.info(f"Vmax set to {self.vmax} for molecule")
 
+        #enable SCF
+        params["SCF"] = True
+        logger.info("SCF enabled")
+        
         return params
 
     def get_structure(self, struct_type: str | None = None) -> str:
@@ -435,6 +439,7 @@ def struct2fdmnes(
     filename: None | str = None,
     radius: float = 7,
     edge: str | None = None,
+    optimize: bool = True,
 ) -> dict:
     """convert CIF/XYZ  into a dictionary of {name: text} for FDMNES output files
 
@@ -450,6 +455,8 @@ def struct2fdmnes(
         format of text : 'cif' or 'xyz' ['cif']
     filename : str
         full path to filename  ['unknown.{format}']
+    optimize : bool
+        optimize input parameters based on absorber and structure [True]
 
     Returns
     -------
@@ -481,5 +488,6 @@ def struct2fdmnes(
         edge=edge,
         radius=radius,
         fileout_prefix=fout_prefix,
+        optimize=optimize,
     )
     return {"fdmfile.txt": f"1\n{fout_name}\n", fout_name: fdm.get_input()}
