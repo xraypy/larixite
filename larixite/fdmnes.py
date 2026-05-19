@@ -9,9 +9,8 @@ Generating FDMNES input files
 spectroscopy (XAS, XES, RIXS) from the atomic structures
 
 """
-
+import time
 from dataclasses import dataclass
-from typing import Union
 from pathlib import Path
 from pymatgen.core import __version__ as pymatgen_version, Element, Molecule
 from larixite.struct import get_structure, get_structure_from_text
@@ -23,24 +22,25 @@ logger = get_logger("larixite.fdmnes")
 
 TEMPLATE_FOLDER = Path(Path(__file__).parent, "templates")
 
-FDMNES_DEFAULT_PARAMS = {
+FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Energpho": False,
     "Quadrupole": False,
+    "Polarize": False,  #: -> TODO
     "Density": False,
     "Density_all": False,
     "Green": True,
     "Memory_save": True,
     "Relativism": False,
-    "Spinorbit": None,
+    "Spinorbit": False,
     "SCF": False,
-    "SCFexc": False,
-    "SCFexcv": False,
-    "Screening": False,
-    "Full_atom": False,
+    "SCF_exc": False,
+    "Screening": False,  #: -> TODO
+    "Dilatorb": False,  #: -> TODO
     "TDDFT": False,
-    "PBE96": False,
+    "SpGr_atom": False,  #: `Full_atom` is by default since March 2026
+    "Hedin": False,  #: `PBE69` is by default since March 2026
     "Atom_conf": False,  #: preferred over `Atom` (permits to keep atomic number in the list of atoms) -> TODO
-    "COOP": False,
+    "COOP": False,  #: -> TODO
     "Convolution": True,
 }
 
@@ -49,24 +49,31 @@ FDMNES_DEFAULT_PARAMS = {
 class FdmnesXasInput:
     """Input generator for a XAS calculation with FDMNES"""
 
-    structpath: Union[
-        str, Path, XasStructure
-    ]  #: path to the structural file or XasStructure
-    absorber: Union[
-        str, int, Element
-    ]  #: atomic symbol or number of the absorbing element
-    frame: int = 0  #: index of the frame inside the structure
-    edge: Union[str, None] = None  #: edge for calculation
+    structpath: (
+        str | Path | XasStructure
+    )  #: str or path to the structural file, or directly the XasStructure object
+    absorber: str | int | Element  #: atomic symbol or number of the absorbing element
+    edge: str | None = None  #: edge for calculation
+    struct_type: str | None = None  #: type of the structure
+    frame: int = (
+        0  #: index of the frame inside the structure (e.g. for multi-frame XYZ files)
+    )
     radius: float = 7  #: radius of the calculation
-    struct_type: Union[str, None] = None  #: type of the structure
-    vmax: Union[float, None] = None  #: maximum potential value for molecules
-    erange: str = "-20.0 0.1 70.0 1.0 100.0"  #: energy range
+    erange: str = "-10.0 0.25 60.0 1.0 100.0"  #: energy range
+    rself: float | None = None  #: radius for the SCF calculation
+    nself: int = 100  #: number of maximum iterations for the SCF calculation
+    pself: float = 0.025  #: initial weight for the SCF calculation
+    vmax: float | None = None  #: maximum potential value for molecules
     fileout_prefix: str = (
         "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
     )
-    tmplpath: Union[str, Path, None] = None  #: path to the FDMNES input template
-    params: Union[dict[str, bool], None] = None  #: enable/disable parameters for FDMNES
-    spacer: str = "   "  #: spacer for the FDMNES input text
+    tmplpath: str | Path | None = (
+        None  #: path to the templates directory (FDMNES inputs and sbatch)
+    )
+    params: dict[str, bool] | None = None  #: enable/disable parameters for FDMNES
+    optimize: bool = False  #: optimize the input parameters
+    spacer: str = "   "  #: spacer string for the FDMNES input text
+    outdir: str | Path | None = None  #: path to the output directory of the FDMNES jobs
 
     def __post_init__(self):
         """Validate and optimize attributes"""
@@ -79,32 +86,72 @@ class FdmnesXasInput:
         if isinstance(self.structpath, str):
             self.structpath = Path(self.structpath)
         if isinstance(self.structpath, XasStructure):
-            self.xs = self.structpath
-            self.structpath = self.xs.filepath
+            self._xs = self.structpath
+            self.structpath = self._xs.filepath
         else:
-            self.xs = get_structure(self.structpath, absorber=self.absorber)
+            self._xs = get_structure(self.structpath, absorber=self.absorber)
         #: radius
         self.set_radius(self.radius)
+        #: R_self
+        if self.rself is None:
+            self.set_rself()
         #: structure type
         if self.struct_type is None:
-            self.struct_type = self.xs.struct_type
+            self.struct_type = self._xs.struct_type
         else:
-            self.xs.struct_type = self.struct_type
+            self._xs.struct_type = self.struct_type
         #: template
         if self.tmplpath is None:
-            self.tmplpath = Path(TEMPLATE_FOLDER, "fdmnes_xas.tmpl")
+            self.tmplpath = Path(TEMPLATE_FOLDER)
         if isinstance(self.tmplpath, str):
             self.tmplpath = Path(self.tmplpath)
         #: absorption edge
         self.validate_edge()
-        #: optimize params
+        #: parameters
         if self.params is None:
             self.params = FDMNES_DEFAULT_PARAMS
+        #: optimize params
+        if self.optimize:
             self.params = self.optimize_params()
+        #: set outdir to None before writing the input
+        if isinstance(self.outdir, str):
+            self.outdir = Path(self.outdir)
+        if self.outdir is None:
+            self.outdir = Path.home() / ".larixite" / "fdmnes"
+
+        #: store a list of jobs
+        self._jobs = []
+
+    @property
+    def xs(self):
+        return self._xs
+
+    @property
+    def green(self):
+        return self.params["Green"]
+
+    @green.setter
+    def green(self, val):
+        self.params["Green"] = val
+
+    @property
+    def scf(self):
+        return self.params["SCF"]
+
+    @scf.setter
+    def scf(self, val):
+        self.params["SCF"] = val
 
     def set_radius(self, value: float):
         self.radius = value
-        self.xs.radius = value
+        self._xs.radius = value
+
+    def set_rself(self):
+        if self.radius < 3.5:
+            self.rself = self.radius
+        else:
+            self.rself = 3.5
+        logger.debug(f"R_self set to {self.rself} for radius {self.radius}")
 
     def validate_edge(self):
         """Validates and adjusts the edge attribute"""
@@ -146,7 +193,7 @@ class FdmnesXasInput:
     def optimize_params(self) -> dict:
         """Optimize the given input parameters"""
         params = self.params.copy()
-        atoms_z = [species.Z for species in self.xs.struct.types_of_species]
+        atoms_z = [species.Z for species in self._xs.struct.types_of_species]
         abs_z = self.absorber.Z
         transition_metals = [range(21, 31), range(39, 49), range(57, 81)]
 
@@ -165,22 +212,17 @@ class FdmnesXasInput:
                 "Spinorbit enabled. **NOTE**: the simulations are typically 4 to 8 times longer and need 2 times more memory space"
             )
 
-        if (8 in atoms_z) and (params["SCF"] is True):
-            """Sometimes, and specifically for oxides, it can be noted that SCF leads to solutions not
-            converging versus the cluster radius. One observes for instance a beating phenomenon
-            on the atomic charges, versus the number of atomic shells incoming in the calculation
-            area. This can be overcome by the use of the keyword "Full_atom" which suppress an
-            approximation, taking the cluster atoms equivalent by the space group symmetry
-            instead of the punctual group symmetry."""
-
-            params["Full_atom"] = True
-
         if "mol" in self.struct_type.lower():
             self.vmax = -6
+            logger.info(f"Vmax set to {self.vmax} for molecule")
+
+        #enable SCF
+        params["SCF"] = True
+        logger.info("SCF enabled")
 
         return params
 
-    def get_structure(self, struct_type: Union[str, None] = None) -> str:
+    def get_structure(self, struct_type: str | None = None) -> str:
         """Get the structure section of the input
 
         Parameters
@@ -209,7 +251,7 @@ class FdmnesXasInput:
             self.optimize_params()
         else:
             struct_type = self.struct_type
-        if "crys" in struct_type.lower() and isinstance(self.xs.struct, Molecule):
+        if "crys" in struct_type.lower() and isinstance(self._xs.struct, Molecule):
             errmsg = "cannot generate a crystal input from a molecule -> use `struct_type='molecule'`"
             logger.error(errmsg)
             raise AttributeError(errmsg)
@@ -220,7 +262,7 @@ class FdmnesXasInput:
             structout.append("Z_absorber")
             structout.append(f"{self.spacer}{self.absorber.Z}")
             #: space group
-            spgrp = self.xs.space_group
+            spgrp = self._xs.space_group
             if spgrp == 1:  #: FDMNES doesn't recognize 1 as a space group -> `P1`
                 spgrp = "P1"
             if spgrp == 2:  #: FDMNES doesn't recognize 2 as a space group -> `P-1`
@@ -231,7 +273,7 @@ class FdmnesXasInput:
             structout.append("Occupancy")
             #: crystal
             structout.append("Crystal")
-            lattice = self.xs.sym_struct.lattice
+            lattice = self._xs.sym_struct.lattice
             structout.append(
                 f"{self.spacer}{lattice.a} {lattice.b} {lattice.c} {lattice.alpha} {lattice.beta} {lattice.gamma}"
             )
@@ -242,11 +284,11 @@ class FdmnesXasInput:
                 occupancy,
                 len_sites,
                 wyckoff,
-            ) in self.xs.unique_sites:
+            ) in self._xs.unique_sites:
                 zelems = [elem.Z for elem in site.species.elements]
                 if not len(set(zelems)) == 1:
                     logger.warning(
-                        f"[{self.xs.label}] site {idx} has species with different Z -> {site.species_string}"
+                        f"[{self._xs.label}] site {idx} has species with different Z -> {site.species_string}"
                     )
                 for elem, elstr in zip(
                     site.species.elements, site.species_string.split(", ")
@@ -255,7 +297,7 @@ class FdmnesXasInput:
                     structout.append(sitestr)
         elif "mol" in struct_type.lower():
             #: build the cluster and map by distance from absorber at (0,0,0)
-            mol = self.xs.cluster
+            mol = self._xs.cluster
             map_mol_by_dist = [(0, 0)]
             for i, site in enumerate(mol[1:]):
                 isite = i + 1
@@ -282,7 +324,7 @@ class FdmnesXasInput:
         return "\n".join(structout)
 
     def get_vmax(self) -> str:
-        """Get the vmax section of the input"""
+        """Get the Vmax section of the input"""
         if self.vmax is not None:
             vmax = ["Vmax"]
             vmax.append(f"{self.spacer}-6")
@@ -290,13 +332,29 @@ class FdmnesXasInput:
         else:
             return "! Vmax"
 
-    def get_input(self, comment: str = "", struct_type: str = None) -> str:
+    def get_rself(self):
+        """Get the R_self section of the input"""
+        if self.rself is not None:
+            return f"{self.spacer}{self.rself}"
+        else:
+            return "!"
+
+    def get_input(
+        self,
+        comment: str = "",
+        struct_type: str = None,
+        template: str | Path | None = None,
+    ) -> str:
         """Get the FDMNES input text"""
         params = self.params.copy()
-        template = open(self.tmplpath, "r").read()
+        if template is None:
+            template = self.tmplpath / "fdmnes_xas.tmpl"
+        if isinstance(template, str):
+            template = Path(template)
+        template_text = open(template, "r").read()
 
         comment = (
-            f"{self.spacer}{self.xs.name}: {self.absorber.symbol} ({self.absorber.Z}) {self.edge} edge"
+            f"{self.spacer}{self._xs.name}: {self.absorber.symbol} ({self.absorber.Z}) {self.edge} edge"
             + comment
         )
         #: fill the template
@@ -313,49 +371,87 @@ class FdmnesXasInput:
             "radius": f"{self.spacer}{self.radius:.2f}",
             "erange": self.spacer + self.erange,
             "vmax": self.get_vmax(),
+            "rself": self.get_rself(),
+            "nself": f"{self.spacer}{self.nself}",
+            "pself": f"{self.spacer}{self.pself:.3f}",
             "struct_type": self.struct_type,
             "structure": self.get_structure(struct_type=struct_type),
         }
         for parkey, parval in params.items():
             conf[parkey] = str(parkey) if parval is True else f"! {parkey}"
 
-        return strict_ascii(template.format(**conf))
+        return strict_ascii(template_text.format(**conf))
 
     def write_input(
-        self, inputtext: Union[str, None] = None, outdir: Union[str, Path, None] = None
+        self, inputtext: str | None = None, outdir: str | Path | None = None
     ) -> Path:
-        """Write the FDMNES input text to disk and return the output directory"""
+        """Write the FDMNES input text to disk and return the job output directory"""
         if inputtext is None:
             inputtext = self.get_input()
-        if outdir is None:
-            import tempfile
-
-            outdir = (
-                Path(tempfile.gettempdir()) / "larixite" / "fdmnes" / str(self.xs.name)
-            )
-            outdir.mkdir(parents=True, exist_ok=True)
-            outdir = tempfile.mkdtemp(dir=outdir, prefix="job_")
         if isinstance(outdir, str):
             outdir = Path(outdir)
-        outdir.mkdir(parents=True, exist_ok=True)
+        if outdir is None:
+            outdir = self.outdir
+        tstamp = time.strftime("%y%m%d_%H%M%S")  #: 260518_144910
+        jobdir = outdir / f"{self.fileout_prefix}_{tstamp}"
+        jobdir.mkdir(parents=True, exist_ok=True)
         fileout_name = f"{self.fileout_prefix}.inp"
-        fnout = outdir / fileout_name
+        fnout = jobdir / fileout_name
         with open(fnout, "w") as fp:
             fp.write(inputtext)
-        with open(outdir / "fdmfile.txt", "w") as fp:
+        with open(jobdir / "fdmfile.txt", "w") as fp:
             fp.write(f"1\n{fileout_name}\n")
-        logger.info(f"written `{fnout}`")
-        return outdir
+            logger.info(f"written {fp.name}")
+        self._jobs.append(jobdir)
+        return jobdir
+
+    def write_sbatch(self, jobdir: str | Path | None = None, template: str | Path | None = None, ncpus: int = 8):
+        """Generates a SBATCH file (SLURM workload manager) using a template
+
+        Arguments
+        ---------
+        jobdir: str, Path or None  
+            path to the job directory to write the SBATCH file
+            if None: uses last job directory
+        template: str, Path or None
+            path to the SBATCH template file
+            if None, the default template will be used (`fdmnes_sbatch_esrf.tmpl`)
+        **kwargs
+            keyword arguments to be replaced in the template file
+
+        Returns
+        -------
+        None: writes `{self.fileout_prefix}.sbatch`
+
+        """
+        if template is None:
+            template = self.tmplpath / "fdmnes_sbatch_esrf.tmpl"
+        if jobdir is None:
+            try:
+                jobdir = self._jobs[-1]
+            except IndexError:
+                logger.error("execute `write_input` first")
+                return
+        if isinstance(jobdir, str):
+            jobdir = Path(jobdir)
+        sbatchout = jobdir / f"{self.fileout_prefix}.sbatch"
+        kwargs = {"jobname": self.fileout_prefix,
+                  "ncpus": ncpus,}
+        with open(sbatchout, "w") as fp, open(template) as tp:
+            fp.write(tp.read().format(**kwargs))
+            logger.info(f"written {fp.name}")
 
 
 def struct2fdmnes(
-    inp: Union[str, Path],
-    absorber: Union[str, int, Element],
+    inp: str | Path,
+    absorber: str | int | Element,
     frame: int = 0,
     format: str = "cif",
-    filename: Union[None, str] = None,
+    filename: None | str = None,
     radius: float = 7,
     edge: str | None = None,
+    optimize: bool = True,
+    green: bool = True,
 ) -> dict:
     """convert CIF/XYZ  into a dictionary of {name: text} for FDMNES output files
 
@@ -371,6 +467,10 @@ def struct2fdmnes(
         format of text : 'cif' or 'xyz' ['cif']
     filename : str
         full path to filename  ['unknown.{format}']
+    optimize : bool
+        optimize input parameters based on absorber and structure [True]
+    green : bool
+        use muffin-tin approximation [True]
 
     Returns
     -------
@@ -402,5 +502,7 @@ def struct2fdmnes(
         edge=edge,
         radius=radius,
         fileout_prefix=fout_prefix,
+        optimize=optimize,
     )
+    fdm.green = green
     return {"fdmfile.txt": f"1\n{fout_name}\n", fout_name: fdm.get_input()}

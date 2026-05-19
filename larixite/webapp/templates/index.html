@@ -98,26 +98,56 @@
             {% endfor %}
         </td>
       </tr>
-      <tr>
-        <td><label for="cluster_size">Cluster Size (Ang): </label></td><td>
-            <input style="width: 100px;" type="number" id="cluster_size"
-                   name="cluster_size" value="{{ cluster_size }}"
-                   step=0.1 min=2.0 max=40.0>
-        </td>
-        <td  colspan=2>  <input type="checkbox" id="with_h" name="with_h"
-                               {% if with_h  %} checked="checked" {% endif %}       >
-          <label for="with_h">Include H atoms</label> </td>
+        <tr>
+          <td><label for="cluster_size">Cluster Size (Ang): </label></td><td>
+              <input style="width: 100px;" type="number" id="cluster_size"
+                     name="cluster_size" value="{{ cluster_size }}"
+                     step=0.1 min=2.0 max=40.0>
+          </td>
+          <td  colspan=2>  <input type="checkbox" id="with_h" name="with_h"
+                                 {% if with_h  %} checked="checked" {% endif %}       >
+            <label for="with_h">Include H atoms</label> </td>
 
-      </tr>
-      <tr>
-        <td colspan=2>
-          <input type="submit" name="feff" value="Generate Feff Inputs">
-        </td>
-        <td colspan=2>
-          <input type="submit" name="fdmnes" value="Generate FDMNES Input">
-        </td>
-      </tr>
-    </table>
+        </tr>
+      </table>
+
+      <hr>
+      <table cellpadding=2 border=0>
+        <tr>
+          <td style="font-weight: bold;">FEFF</td>
+
+        </tr>
+        <tr>
+          <td>
+            <input type="submit" name="feff" value="Generate Feff Input">
+          </td>
+        </tr>
+      </table>
+
+      <hr>
+       <table cellpadding=2 border=0>
+         <tr>
+           <td style="font-weight: bold;">FDMNES</td>
+
+         </tr>
+         <tr>
+           <td>  <input type="checkbox" id="green" name="green"
+                                  {% if green  %} checked="checked" {% endif %}       >
+             <label for="green">Use Green formalism on a muffin-tin potential (= less accurate but faster calculation)</label> </td>
+
+         </tr>
+         <tr>
+           <td>  <input type="checkbox" id="optimize" name="optimize"
+                                  {% if optimize  %} checked="checked" {% endif %}       >
+             <label for="optimize">Optimize input parameters (= more accurate but slower calculation)</label> </td>
+
+         </tr>
+         <tr>
+           <td>
+             <input type="submit" name="fdmnes" value="Generate FDMNES Input">
+           </td>
+         </tr>
+       </table>
 
     <hr>
      CIF Text:<p><pre>{{ciftext|safe}}</pre>
@@ -131,13 +161,13 @@
        <table padding=3 >
          <tr><td> File Link</td> <td> Crystal Site/File Type</td></tr>
          {% if zip_link: %}
-           <tr class='even' >
-             <td><a href="{{url_for('zipfile', cifid=zip_link[1],
-             absorber=zip_link[2],  edge=zip_link[3],
-             cluster_size=zip_link[4], with_h=zip_link[5],
-             form=zip_link[6], fname=zip_link[0]) }}"> {{  zip_link[0] }} </a></td>
-             <td> &nbsp;  Zip File, all outputs </td>
-           </tr>
+            <tr class='even' >
+              <td><a href="{{url_for('zipfile', cifid=zip_link[1],
+              absorber=zip_link[2],  edge=zip_link[3],
+              cluster_size=zip_link[4], with_h=zip_link[5],
+              form=zip_link[6], optimize=zip_link[7], green=zip_link[8], fname=zip_link[0]) }}"> {{  zip_link[0] }} </a></td>
+              <td> &nbsp;  Zip File, all outputs </td>
+            </tr>
          {% endif %}
          {% if cif_link: %}
            <tr class='odd'>
@@ -151,9 +181,9 @@
          {% for link, data in out_links.items() %}
            <tr class={{ loop.cycle('even', 'odd') }}>
              <td><a href="{{url_for('output', cifid=data[1],
-             absorber=data[2],  edge=data[3], site=data[4],
-             cluster_size=data[5], with_h=data[6], form=data[7],
-             fname=link )}}">{{ link }}</a></td>
+               absorber=data[2],  edge=data[3], site=data[4],
+               cluster_size=data[5], with_h=data[6], form=data[7],
+               optimize=data[8], green=data[9], fname=link )}}">{{ link }}</a></td>
              <td> &nbsp;  {{ data[0] }} </td>
            </tr>
          {% endfor %}

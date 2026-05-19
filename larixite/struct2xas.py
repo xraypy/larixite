@@ -3,12 +3,19 @@
 
 """
 Struct2XAS: convert CIFs and XYZs files to FDMNES and FEFF inputs
+
+
+/!\ DEPRECATED /!\
+THIS MODULE WILL BE REMOVED IN FUTURE VERSIONS
+-> USE larixite.struct or larixite.fdmnes
+/!\ DEPRECATED /!\
 """
 
 # main imports
 import os
 import json
 import time
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Union, List  # , Any, Dict
 
@@ -21,20 +28,13 @@ from pymatgen.io.xyz import XYZ
 from pymatgen.io.cif import CifParser
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
-import larch.utils.logging as logging
-from larch.utils import mkdir, unixpath
+from larixite.utils import mkdir, unixpath, get_logger
 
-from larch.site_config import user_larchdir
-from larch.io import read_ascii
-from larch.math.convolution1D import lin_gamma, conv
+#from larch.site_config import user_larchdir
+#from larch.io import read_ascii
+#from larch.math.convolution1D import lin_gamma, conv
 
-try:
-    import pandas as pd
-    from pandas.io.formats.style import Styler
-
-    HAS_PANDAS = True
-except ImportError:
-    HAS_PANDAS = False
+user_larchdir = Path.home() / ".larixite"
 
 try:
     import py3Dmol
@@ -46,12 +46,12 @@ except ImportError:
 
 __author__ = ["Beatriz G. Foschiani", "Mauro Rovezzi"]
 __email__ = ["beatrizgfoschiani@gmail.com", "mauro.rovezzi@esrf.fr"]
-__credits__ = ["Jade Chongsathapornpong", "Marius Retegan"]
-__version__ = "2024.1.0"
+__credits__ = ["Jade Chongsathapornpong", "Marius Retegan", "Helen Engelhardt"]
+__version__ = "2026.1.0"
 
 
 # initialize the logger
-logger = logging.getLogger("struct2xas", level="INFO")
+logger = get_logger("struct2xas", level="INFO")
 
 
 def _get_timestamp() -> str:
@@ -72,30 +72,20 @@ def _pprint(matrix):
 
 
 def xyz2struct(molecule):
-    """Convert pymatgen molecule to dummy pymatgen structure"""
-
-    alat, blat, clat = 1, 1, 1
-
-    # Set the lattice dimensions in each direction
-    for i in range(len(molecule) - 1):
-        if molecule.cart_coords[i][0] > molecule.cart_coords[i + 1][0]:
-            alat = molecule.cart_coords[i][0]
-        if molecule.cart_coords[i][1] > molecule.cart_coords[i + 1][1]:
-            blat = molecule.cart_coords[i][1]
-        if molecule.cart_coords[i][2] > molecule.cart_coords[i + 1][2]:
-            clat = molecule.cart_coords[i][2]
-
-    # Set the lattice dimensions in each direction
+    """Convert pymatgen molecule to dummy pymatgen structure using vectorized calculation."""
+    # Ensure the coordinates are in a NumPy array
+    coords = np.array(molecule.cart_coords)
+    
+    # Compute maximum coordinate along each axis
+    alat, blat, clat = np.max(coords, axis=0)
+    
     lattice = Lattice.from_parameters(
         a=alat, b=blat, c=clat, alpha=90, beta=90, gamma=90
     )
-
+    
     # Create a list of species
     species = [Element(sym) for sym in molecule.species]
-
-    # Create a list of coordinates
-    coords = molecule.cart_coords
-
+    
     # Create the Structure object
     struct = Structure(lattice, species, coords, coords_are_cartesian=True)
     return struct
@@ -474,17 +464,9 @@ class Struct2XAS:
             "idx_in_struct",
         ]
         abs_sites = self.get_abs_sites()
-        if HAS_PANDAS:
-            df = pd.DataFrame(
-                abs_sites,
-                columns=header,
-            )
-            df = Styler(df).hide(axis="index")
-            return df
-        else:
-            matrix = [header]
-            matrix.extend(abs_sites)
-            _pprint(matrix)
+        matrix = [header]
+        matrix.extend(abs_sites)
+        _pprint(matrix)
 
     def get_atoms_from_abs(self, radius):
         """Get atoms in sphere from absorbing atom with certain radius"""
@@ -744,13 +726,9 @@ class Struct2XAS:
         )
         print(coord_sym)
         header = ["Element", "Distance"]
-        if HAS_PANDAS:
-            df = pd.DataFrame(data=elems_dist, columns=header)
-            return df
-        else:
-            matrix = [header]
-            matrix.extend(elems_dist)
-            _pprint(matrix)
+        matrix = [header]
+        matrix.extend(elems_dist)
+        _pprint(matrix)
 
     def make_cluster(self, radius):
         """Create a cluster with absorber atom site at the center.
@@ -832,6 +810,7 @@ class Struct2XAS:
           ||||||+ job{njob}
 
         """
+        logger.warning("`make_input_fdmnes` is deprecated, use `larixite.fdmnes` instead")
         if parent_path is None:
             parent_path = self.parent_path
 
@@ -861,7 +840,7 @@ class Struct2XAS:
 
         if template is None:
             template = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), "templates", "fdmnes.tmpl"
+                os.path.dirname(os.path.realpath(__file__)), "templates", "fdmnes_struct2xas_to_remove.tmpl"
             )
         assert os.path.isfile(template), "wrong template path"
 
@@ -942,7 +921,7 @@ class Struct2XAS:
                     np.allclose(unique_sites[i][0].coords, selected_site[4], atol=0.01)
                     is True
                 ):
-                    replacements["absorber"] = f"absorber\n{i+1}"
+                    replacements["absorber"] = f"absorber\n{i + 1}"
 
             # absorber = f"{absorber}"
             # replacements["absorber"] = f"Z_absorber\n{round(Element(elem).Z)}"
@@ -963,7 +942,7 @@ class Struct2XAS:
             absorber = f"{absorber}"
             for i in range(len(atoms)):
                 if np.allclose(atoms[i][1], [0, 0, 0], atol=0.01) is True:
-                    replacements["absorber"] = f"absorber\n{i+1}"
+                    replacements["absorber"] = f"absorber\n{i + 1}"
 
             replacements["group"] = ""
 
@@ -1029,6 +1008,7 @@ class Struct2XAS:
         edge: str = "K",
         sig2: Union[float, None] = None,
         debye: Union[List[float], None] = None,
+        feff_print: Union[List[int], None] = None,
         **kwargs,
     ):
         """
@@ -1056,6 +1036,11 @@ class Struct2XAS:
                     temperature at which the Debye-Waller factors are calculated [Kelvin].
                 debye_temperature : float
                     Debye Temperature of the material [Kelvin].
+        feff_print : list of six ints or None, [None]
+            PRINT card values controlling output verbosity for each FEFF module:
+            [pot, xsph, fms, paths, genfmt, ff2chi]
+            Values: 0=minimal, 1=standard, 2+=verbose
+            If None, defaults to [1, 0, 0, 0, 0, 3] (matches structure2feff.py)
 
         ..note:: refer to [FEFF documentation](https://feff.phys.washington.edu/feffproject-feff-documentation.html)
 
@@ -1103,7 +1088,7 @@ class Struct2XAS:
             template = os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 "templates",
-                "feff_exafs.tmpl",
+                "feff_struct2xas_to_remove.tmpl",
             )
         assert os.path.isfile(template), "wrong template path"
 
@@ -1123,6 +1108,10 @@ class Struct2XAS:
         else:
             use_debye = ""
             temperature, debye_temperature = debye[0], debye[1]
+
+        # Default PRINT values match structure2feff.py behavior
+        if feff_print is None:
+            feff_print = [1, 0, 0, 0, 0, 3]
 
         feff_comment = f"{feff_comment}"
         edge = f"{edge}"
@@ -1210,7 +1199,7 @@ class Struct2XAS:
         for i in range(len(at)):
             if self.full_occupancy:
                 atoms += "\n" + (
-                    f"{at[i][0][0]:10.6f} {at[i][0][1]:10.6f} {at[i][0][2]:10.6f} {  int(at[i][1])}  {at[i][2]:>5} {at[i][3]:10.5f}         *1 "
+                    f"{at[i][0][0]:10.6f} {at[i][0][1]:10.6f} {at[i][0][2]:10.6f} {int(at[i][1])}  {at[i][2]:>5} {at[i][3]:10.5f}         *1 "
                 )
             else:
                 choice = np.random.choice(
@@ -1233,6 +1222,12 @@ class Struct2XAS:
         replacements["potentials"] = potentials
         replacements["atoms"] = atoms
         replacements["title"] = title
+        replacements["print_pot"] = feff_print[0]
+        replacements["print_xsph"] = feff_print[1]
+        replacements["print_fms"] = feff_print[2]
+        replacements["print_paths"] = feff_print[3]
+        replacements["print_genfmt"] = feff_print[4]
+        replacements["print_ff2chi"] = feff_print[5]
         # replacements[""] =
 
         try:
@@ -1386,67 +1381,67 @@ class Struct2XAS:
             # print("Label:\n", color_elems)
 
 
-def get_fdmnes_info(file, labels=("energy", "mu")):
-    """Get info from the fdmnes output file such as edge energy, atomic number Z,
-      and fermi level energy, and returns a group with the storage information
+# def get_fdmnes_info(file, labels=("energy", "mu")):
+#     """Get info from the fdmnes output file such as edge energy, atomic number Z,
+#       and fermi level energy, and returns a group with the storage information
 
-      Parameters:
+#       Parameters:
 
-        file (str): path to the fdmnes output file.
-    Obs: The INPUT file must have the "Header" keyword to use this function in the OUTPUT file
+#         file (str): path to the fdmnes output file.
+#     Obs: The INPUT file must have the "Header" keyword to use this function in the OUTPUT file
 
-    """
-    group = read_ascii(file, labels=labels)
+#     """
+#     group = read_ascii(file, labels=labels)
 
-    with open(group.path) as f:
-        line = f.readlines()[3]
-        header = line.split()
-        (
-            e_edge,
-            Z,
-            e_fermi,
-        ) = (float(header[0]), float(header[1]), float(header[6]))
-        print(
-            f"Calculated Fermi level: {e_fermi}\nAtomic_number: {Z}\nEnergy_edge: {e_edge}"
-        )
+#     with open(group.path) as f:
+#         line = f.readlines()[3]
+#         header = line.split()
+#         (
+#             e_edge,
+#             Z,
+#             e_fermi,
+#         ) = (float(header[0]), float(header[1]), float(header[6]))
+#         print(
+#             f"Calculated Fermi level: {e_fermi}\nAtomic_number: {Z}\nEnergy_edge: {e_edge}"
+#         )
 
-    group.e_edge = e_edge
-    group.Z = Z
-    group.e_fermi = e_fermi
+#     group.e_edge = e_edge
+#     group.Z = Z
+#     group.e_fermi = e_fermi
 
-    return group
+#     return group
 
 
-def convolve_data(
-    energy, mu, group, fwhm=1, linbroad=[1.5, 0, 50], kernel="gaussian", efermi=None
-):
-    """
-    Function for manual convolution using Convolution1D from larch and returning a group
+# def convolve_data(
+#     energy, mu, group, fwhm=1, linbroad=[1.5, 0, 50], kernel="gaussian", efermi=None
+# ):
+#     """
+#     Function for manual convolution using Convolution1D from larch and returning a group
 
-    Generic discrete convolution
+#     Generic discrete convolution
 
-    Description
-    -----------
+#     Description
+#     -----------
 
-    This is a manual (not optimized!) implementation of discrete 1D
-    convolution intended for spectroscopy analysis. The difference with
-    commonly used methods is the possibility to adapt the convolution
-    kernel for each convolution point, e.g. change the FWHM of the
-    Gaussian kernel as a function of the energy scale.
+#     This is a manual (not optimized!) implementation of discrete 1D
+#     convolution intended for spectroscopy analysis. The difference with
+#     commonly used methods is the possibility to adapt the convolution
+#     kernel for each convolution point, e.g. change the FWHM of the
+#     Gaussian kernel as a function of the energy scale.
 
-    Resources
-    ---------
+#     Resources
+#     ---------
 
-    .. [WPconv] <http://en.wikipedia.org/wiki/Convolution#Discrete_convolution>
-    .. [Fisher] <http://homepages.inf.ed.ac.uk/rbf/HIPR2/convolve.htm>
-    .. [GP1202] <http://glowingpython.blogspot.fr/2012/02/convolution-with-numpy.html>
+#     .. [WPconv] <http://en.wikipedia.org/wiki/Convolution#Discrete_convolution>
+#     .. [Fisher] <http://homepages.inf.ed.ac.uk/rbf/HIPR2/convolve.htm>
+#     .. [GP1202] <http://glowingpython.blogspot.fr/2012/02/convolution-with-numpy.html>
 
-    """
+#     """
 
-    gamma_e = lin_gamma(energy, fwhm=fwhm, linbroad=linbroad)
-    mu_conv = conv(energy, mu, kernel=kernel, fwhm_e=gamma_e, efermi=efermi)
-    group.conv = mu_conv
-    return group
+#     gamma_e = lin_gamma(energy, fwhm=fwhm, linbroad=linbroad)
+#     mu_conv = conv(energy, mu, kernel=kernel, fwhm_e=gamma_e, efermi=efermi)
+#     group.conv = mu_conv
+#     return group
 
 
 def save_cif_from_mp(

@@ -7,6 +7,7 @@ import os
 import logging
 import io
 from datetime import datetime
+from pathlib import Path
 from typing import Union
 from gzip import GzipFile
 from pathlib import Path
@@ -43,9 +44,7 @@ def get_homedir() -> Path:
             # use Windows API to get home directory
             from win32com.shell import shellcon, shell
 
-            homedir = Path(
-                shell.SHGetFolderPath(0, shellcon.CSIDL_APPDATA, 0, 0)
-            )
+            homedir = Path(shell.SHGetFolderPath(0, shellcon.CSIDL_APPDATA, 0, 0))
         except ImportError:
             pass
 
@@ -257,3 +256,13 @@ def read_textfile(filename: Union[Path, io.IOBase, str, bytes], size=None) -> st
         with fopen(get_path(filename), "rb") as fh:
             text = bytes2str(fh.read(size))
     return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def unixpath(d):
+    if isinstance(d, bytes):
+        d = str(from_bytes(d).best())
+    if isinstance(d, str):
+        d = Path(d).absolute()
+    if isinstance(d, Path):
+        return d.as_posix()
+    raise ValueError(f"cannot get Path name from {d}")
