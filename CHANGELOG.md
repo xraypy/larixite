@@ -18,6 +18,11 @@ The versioning scheme followed is `YYYY.MAJOR.MINOR`:
 
 - Update to FDMNES version March 2026
 - Add `make_sbatch` with a template for the ESRF SLURM scheduler
+- Add `optimize : bool = False` option in `FdmnesXasInput` class to control if
+  the input parameters are optimized (= more accurate calcuation, but slower) or
+  not
+- Add FDMNES optimization checkbox in the Web application
+- Added more tests
 
 ### `struc2xas`
 
