@@ -13,11 +13,12 @@ Edge
 !<Energy range>
 Range
 {erange}
-{Energpho} !output energy as photon energy (default relative to Fermi level)
+{Energpho} !output energy as photon energy (default: relative to the Fermi level)
 Radius
 {radius}
-!<Multiple scattering mode>
-{Green}
+!<Method to solve the Schroedinger equation> 
+{Green}  ! use Green formalism (multiple scattering) on a muffin-tin potential
+! (default: Finite Difference Method (FDM) on a free-shape potential)
 !<Multipolar expansion>
 {Quadrupole}
 !<Polarization and dichroism>
