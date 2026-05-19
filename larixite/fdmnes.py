@@ -9,7 +9,7 @@ Generating FDMNES input files
 spectroscopy (XAS, XES, RIXS) from the atomic structures
 
 """
-
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from pymatgen.core import __version__ as pymatgen_version, Element, Molecule
@@ -73,6 +73,7 @@ class FdmnesXasInput:
     params: dict[str, bool] | None = None  #: enable/disable parameters for FDMNES
     optimize: bool = False  #: optimize the input parameters
     spacer: str = "   "  #: spacer string for the FDMNES input text
+    outdir: str | Path | None = None  #: path to the output directory of the FDMNES jobs
 
     def __post_init__(self):
         """Validate and optimize attributes"""
@@ -113,7 +114,13 @@ class FdmnesXasInput:
         if self.optimize:
             self.params = self.optimize_params()
         #: set outdir to None before writing the input
-        self.outdir = None
+        if isinstance(self.outdir, str):
+            self.outdir = Path(self.outdir)
+        if self.outdir is None:
+            self.outdir = Path.home() / "larixite"
+
+        #: store a list of jobs
+        self._jobs = []
 
     @property
     def xs(self):
@@ -378,35 +385,34 @@ class FdmnesXasInput:
     def write_input(
         self, inputtext: str | None = None, outdir: str | Path | None = None
     ) -> Path:
-        """Write the FDMNES input text to disk and return the output directory"""
+        """Write the FDMNES input text to disk and return the job output directory"""
         if inputtext is None:
             inputtext = self.get_input()
-        if outdir is None:
-            import tempfile
-
-            outdir = (
-                Path(tempfile.gettempdir()) / "larixite" / "fdmnes" / str(self._xs.name)
-            )
-            outdir.mkdir(parents=True, exist_ok=True)
-            outdir = tempfile.mkdtemp(dir=outdir, prefix="job_")
         if isinstance(outdir, str):
             outdir = Path(outdir)
-        outdir.mkdir(parents=True, exist_ok=True)
+        if outdir is None:
+            outdir = self.outdir
+        tstamp = time.strftime("%y%m%d_%H%M%S")  #: 260518_144910
+        jobdir = outdir / f"{self.fileout_prefix}_{tstamp}"
+        jobdir.mkdir(parents=True, exist_ok=True)
         fileout_name = f"{self.fileout_prefix}.inp"
-        fnout = outdir / fileout_name
+        fnout = jobdir / fileout_name
         with open(fnout, "w") as fp:
             fp.write(inputtext)
-        with open(outdir / "fdmfile.txt", "w") as fp:
+        with open(jobdir / "fdmfile.txt", "w") as fp:
             fp.write(f"1\n{fileout_name}\n")
-        logger.info(f"written `{fnout}`")
-        self.outdir = outdir
-        return outdir
+            logger.info(f"written {fp.name}")
+        self._jobs.append(jobdir)
+        return jobdir
 
-    def write_sbatch(self, template: str | Path | None = None, ncpus: int = 8):
+    def write_sbatch(self, jobdir: str | Path | None = None, template: str | Path | None = None, ncpus: int = 8):
         """Generates a SBATCH file (SLURM workload manager) using a template
 
         Arguments
         ---------
+        jobdir: str, Path or None  
+            path to the job directory to write the SBATCH file
+            if None: uses last job directory
         template: str, Path or None
             path to the SBATCH template file
             if None, the default template will be used (`fdmnes_sbatch_esrf.tmpl`)
@@ -420,10 +426,15 @@ class FdmnesXasInput:
         """
         if template is None:
             template = self.tmplpath / "fdmnes_sbatch_esrf.tmpl"
-        if self.outdir is None:
-            logger.error("execute `write_input` first")
-            return
-        sbatchout = self.outdir / f"{self.fileout_prefix}.sbatch"
+        if jobdir is None:
+            try:
+                jobdir = self._jobs[-1]
+            except IndexError:
+                logger.error("execute `write_input` first")
+                return
+        if isinstance(jobdir, str):
+            jobdir = Path(jobdir)
+        sbatchout = jobdir / f"{self.fileout_prefix}.sbatch"
         kwargs = {"jobname": self.fileout_prefix,
                   "ncpus": ncpus,}
         with open(sbatchout, "w") as fp, open(template) as tp:
