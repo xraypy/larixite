@@ -12,7 +12,7 @@ The versioning scheme followed is `YYYY.MAJOR.MINOR`:
 - `MAJOR`: major feature (= change in API, no backward compatibility)
 - `MINOR`: minor feature (= bug fixes, minor changes not affecting the API, backward compatible)
 
-## [2026.1.0 - not released yet]
+## [2026.1.0 - 18-May-2026]
 
 ### web application
 
@@ -28,8 +28,14 @@ The versioning scheme followed is `YYYY.MAJOR.MINOR`:
     - Add `optimize : bool = False` option in `FdmnesXasInput` class to control if the input parameters are optimized (= more accurate calcuation, but slower) or not
     - `write_input()` defaults to `$HOME/.larixite/fdmnes/{job_prefix}_{YYMMDD_HHMMSS}`
 
+### `feff`
+
+    - add more commented-out Feff cars with parameter hints
+    - add atom count and default valus for `l` in the ipot section
+    - fix exchange card to include `vr` and `vi`.
+    - better handling of clusters larger than 8 Ang.
+
 ### `struc2xas`
 
     - Fully migrated from `larch.xrd.struc2xas` (and removed there)
     - Make `struc2xas` *deprecated* and start refactoring
-  
