@@ -34,7 +34,7 @@ from larixite.utils import mkdir, unixpath, get_logger
 #from larch.io import read_ascii
 #from larch.math.convolution1D import lin_gamma, conv
 
-user_larchdir = Path.home() / ".larch"
+user_larchdir = Path.home() / ".larixite"
 
 try:
     import py3Dmol

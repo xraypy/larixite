@@ -117,7 +117,7 @@ class FdmnesXasInput:
         if isinstance(self.outdir, str):
             self.outdir = Path(self.outdir)
         if self.outdir is None:
-            self.outdir = Path.home() / "larixite"
+            self.outdir = Path.home() / ".larixite" / "fdmnes"
 
         #: store a list of jobs
         self._jobs = []
