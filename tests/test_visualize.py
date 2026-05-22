@@ -107,7 +107,8 @@ class TestLightenHex:
 
     def test_darkens_correctly(self):
         result = _lighten_hex("#ff0000", 0.5)
-        assert result == "#800000"
+        # int(255 * 0.5) == 127 (truncation), not 128
+        assert result == "#7f0000"
 
     def test_identity(self):
         assert _lighten_hex("#b57100", 1.0) == "#b57100"
@@ -118,16 +119,19 @@ class TestLightenHex:
         assert "#" in result and len(result) == 7
 
     def test_fe_color(self):
-        fe_hex = VESTA_COLORS["Fe"]
+        fe_hex, fe_name = VESTA_COLORS["Fe"]
         light = _lighten_hex(fe_hex, 0.8)
         assert light != fe_hex
         assert light.startswith("#")
+        assert fe_name == "brown orange"
 
-    def test_all_vesta_colors_valid(self):
-        for sym, hex_color in VESTA_COLORS.items():
+    def test_all_vesta_colors_tuplified(self):
+        for sym, entry in VESTA_COLORS.items():
+            assert isinstance(entry, tuple) and len(entry) == 2
+            hex_color, name = entry
             light = _lighten_hex(hex_color, 0.8)
-            assert light.startswith("#")
-            assert len(light) == 7
+            assert light.startswith("#") and len(light) == 7
+            assert isinstance(name, str) and name
 
     def test_invalid_hex_unchanged(self):
         with pytest.raises(ValueError):
@@ -145,17 +149,18 @@ class TestVestaColors:
             assert sym in VESTA_COLORS
 
     def test_colors_are_hex(self):
-        for v in VESTA_COLORS.values():
-            assert v.startswith("#") and len(v) == 7
+        for hex_color, name in VESTA_COLORS.values():
+            assert hex_color.startswith("#") and len(hex_color) == 7
+            assert isinstance(name, str) and name
 
     def test_all_vesta_values_valid_int(self):
-        for v in VESTA_COLORS.values():
-            int(v[1:3], 16)
-            int(v[3:5], 16)
-            int(v[5:7], 16)
+        for hex_color, name in VESTA_COLORS.values():
+            int(hex_color[1:3], 16)
+            int(hex_color[3:5], 16)
+            int(hex_color[5:7], 16)
 
     def test_no_black_in_palette(self):
-        assert "#000000" not in VESTA_COLORS.values()
+        assert "#000000" not in [h for h, n in VESTA_COLORS.values()]
 
     def test_color_count(self):
         assert len(VESTA_COLORS) > 100
