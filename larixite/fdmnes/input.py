@@ -10,6 +10,7 @@ spectroscopy (XAS, XES, RIXS) from the atomic structures
 
 """
 import time
+import yaml
 from dataclasses import dataclass
 from pathlib import Path
 from pymatgen.core import __version__ as pymatgen_version, Element, Molecule
@@ -441,6 +442,77 @@ class FdmnesXasInput:
         with open(sbatchout, "w") as fp, open(template) as tp:
             fp.write(tp.read().format(**kwargs))
             logger.info(f"written {fp.name}")
+
+    def dump_params(self, yamlpath: str | Path | None = None) -> Path:
+        """Dump input parameters to a YAML file
+
+        Parameters
+        ----------
+        yamlpath : str | Path | None
+            path to the output YAML file
+            if None: writes `{jobdir}/{fileout_prefix}_params.yaml`
+            if jobdir doesn't exist yet, writes next to the structural file
+
+        Returns
+        -------
+        Path
+            path to the written YAML file
+        """
+        params_dict = {
+            "structpath": str(self.structpath),
+            "absorber": self.absorber.symbol,
+            "edge": self.edge,
+            "struct_type": self.struct_type,
+            "frame": self.frame,
+            "radius": self.radius,
+            "erange": self.erange,
+            "rself": self.rself,
+            "nself": self.nself,
+            "pself": self.pself,
+            "vmax": self.vmax,
+            "fileout_prefix": self.fileout_prefix,
+            "params": self.params,
+            "optimize": self.optimize,
+            "spacer": self.spacer,
+            "outdir": str(self.outdir) if self.outdir else None,
+        }
+
+        if yamlpath is None:
+            if self._jobs:
+                yamlpath = self._jobs[-1] / f"{self.fileout_prefix}_params.yaml"
+            else:
+                yamlpath = Path(self.structpath).parent / f"{self.fileout_prefix}_params.yaml"
+
+        if isinstance(yamlpath, str):
+            yamlpath = Path(yamlpath)
+
+        with open(yamlpath, "w") as fp:
+            yaml.dump(params_dict, fp, default_flow_style=False)
+        logger.info(f"written {yamlpath.name}")
+        return yamlpath
+
+    @classmethod
+    def from_yaml(cls, yamlpath: str | Path) -> "FdmnesXasInput":
+        """Restore a FdmnesXasInput object from a YAML parameters file
+
+        Parameters
+        ----------
+        yamlpath : str | Path
+            path to the YAML file previously written by `dump_params()`
+
+        Returns
+        -------
+        FdmnesXasInput
+            reconstructed input object
+        """
+        if isinstance(yamlpath, str):
+            yamlpath = Path(yamlpath)
+
+        with open(yamlpath) as fp:
+            params_dict = yaml.safe_load(fp)
+
+        kwargs = {k: v for k, v in params_dict.items() if k != "structpath"}
+        return cls(params_dict["structpath"], **kwargs)
 
 
 def struct2fdmnes(
