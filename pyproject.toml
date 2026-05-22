@@ -27,6 +27,7 @@ dependencies = [
     "mp-api>=0.45.8",
     "emmet-core>=0.84.9",
     "requests",
+    "py3Dmol",
 ]
 
 license = "MIT"
