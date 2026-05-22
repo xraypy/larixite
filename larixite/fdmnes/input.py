@@ -408,7 +408,7 @@ class FdmnesXasInput:
         _ = self.dump_params(jobdir / f"{self.fileout_prefix}_params.yaml")
         return jobdir
 
-    def write_sbatch(self, jobdir: str | Path | None = None, template: str | Path | None = None, ncpus: int = 8):
+    def write_sbatch(self, jobdir: str | Path | None = None, template: str | Path | None = None, ncpus: int = 8) -> Path:
         """Generates a SBATCH file (SLURM workload manager) using a template
 
         Arguments
@@ -443,6 +443,7 @@ class FdmnesXasInput:
         with open(sbatchout, "w") as fp, open(template) as tp:
             fp.write(tp.read().format(**kwargs))
             logger.info(f"written {fp.name}")
+        return sbatchout
 
     def dump_params(self, yamlpath: str | Path | None = None) -> Path:
         """Dump input parameters to a YAML file
