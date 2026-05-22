@@ -140,6 +140,14 @@ def _round_up(x: float) -> float:
     return math.ceil(x * 100) / 100
 
 
+def _lighten_hex(hex_color: str, factor: float = 0.75) -> str:
+    """Return a darker hex color obtained by scaling each RGB channel by *factor*."""
+    r = int(int(hex_color[1:3], 16) * factor)
+    g = int(int(hex_color[3:5], 16) * factor)
+    b = int(int(hex_color[5:7], 16) * factor)
+    return "#{:02x}{:02x}{:02x}".format(r, g, b)
+
+
 def _cluster_to_xyz(mol) -> tuple[str, list[str]]:
     """Convert a pymatgen Molecule to an XYZ format string and the list of unique elements."""
     coords = []
@@ -200,12 +208,6 @@ def visualize(struct: XasStructure, radius: float = 2.5, unitcell: bool = False)
     color_elems = {}
     for elem in elems:
         color_elems[elem] = VESTA_COLORS.get(elem, "#888888")
-
-    def _lighten_hex(hex_color: str, factor: float = 0.75) -> str:
-        r = int(int(hex_color[1:3], 16) * factor)
-        g = int(int(hex_color[3:5], 16) * factor)
-        b = int(int(hex_color[5:7], 16) * factor)
-        return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
     covalent_r = CovalentRadius().radius
 
