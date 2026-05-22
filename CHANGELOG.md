@@ -12,6 +12,12 @@ The versioning scheme followed is `YYYY.MAJOR.MINOR`:
 - `MAJOR`: major feature (= change in API, no backward compatibility)
 - `MINOR`: minor feature (= bug fixes, minor changes not affecting the API, backward compatible)
 
+## [2026.2.0 - not released yet]
+
+### `fmdnes`
+
+    - Create a `fdmnes` module
+
 ## [2026.1.0 - 18-May-2026]
 
 ### web application
