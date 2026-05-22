@@ -18,9 +18,10 @@ from larixite.struct.xas import XasStructure
 from larixite.utils import get_logger, strict_ascii, isotime, read_textfile
 from larixite.version import __version__ as larixite_version
 
+
 logger = get_logger("larixite.fdmnes")
 
-TEMPLATE_FOLDER = Path(Path(__file__).parent, "templates")
+TEMPLATE_FOLDER = Path(Path(__file__).parent.parent, "templates")
 
 FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Energpho": False,
