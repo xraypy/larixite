@@ -12,6 +12,38 @@ from larixite.utils import get_logger, pprint
 
 logger = get_logger("larixite.struct.analyze")
 
+# Mapping of chemenv coordination environment symbols to human-readable names
+# Based on pymatgen chemenv ideal polyhedra definitions
+CE_SYMBOL_DESCRIPTION = {
+    "L:2": "Linear",
+    "T:3": "Trigonal planar",
+    "B:3": "Bent",
+    "T:4": "Tetrahedral",
+    "S:4": "Square planar",
+    "F:4": "See-saw",
+    "T:5": "Trigonal bipyramidal",
+    "S:5": "Square pyramidal",
+    "B:5": "Bay",
+    "R:5": "Rocket",
+    "G:5": "Envelope",
+    "E:5": "Eclipsed pentagonal",
+    "S:6": "Hexagonal planar",
+    "A:6": "Hexagonal antiprismatic",
+    "T:6": "Trigonal prismatic",
+    "O:6": "Octahedral",
+    "Y:6": "Pentagonal pyramidal",
+    "M:6": "Pentagonal bisphenoidal",
+    "H:6": "Triangular cup",
+    "S:7": "Pentagonal bipyramidal",
+    "D:7": "Heptagonal planar",
+    "S:8": "Square antiprismatic",
+    "D:8": "Dodecahedral",
+    "A:8": "Hexagonal bipyramidal",
+    "A:9": "Monocapped square antiprismatic",
+    "A:10": "Bicapped square antiprismatic",
+    "S:12": "Icosahedral",
+}
+
 
 def _group_into_shells(dists, toler):
     """Group sorted distances into shells.
