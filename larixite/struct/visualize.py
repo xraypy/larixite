@@ -94,8 +94,6 @@ def visualize(struct: XasStructure, radius: float = 2.5, unitcell: bool = False)
         "purple",
         "pink",
         "brown",
-        "black",
-        "gray",
         "cyan",
         "magenta",
         "olive",
@@ -128,16 +126,19 @@ def visualize(struct: XasStructure, radius: float = 2.5, unitcell: bool = False)
             },
         )
 
-    xyzview.addLabel(
-        "Abs",
-        {
-            "fontColor": "black",
-            "fontSize": 14,
-            "backgroundColor": "white",
-            "backgroundOpacity": 0.8,
-            "showBackground": True,
-        },
+    absorber_sym = struct.absorber.symbol
+    absorber_r = max(0.2, min(covalent_r.get(absorber_sym, 0.5) / 2, 0.75))
+    xyzview.setStyle(
         {"index": 0},
+        {
+            "stick": {
+                "radius": 0.1,
+                "opacity": 1,
+                "hidden": False,
+                "color": "gray",
+            },
+            "sphere": {"color": "gray", "radius": absorber_r, "opacity": 1},
+        },
     )
 
     xyzview.zoomTo()
