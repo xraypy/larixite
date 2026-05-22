@@ -8,6 +8,8 @@
 
 import math
 
+from pymatgen.analysis.local_env import CovalentRadius
+
 from larixite.struct.xas import XasStructure
 from larixite.utils import get_logger
 
@@ -108,8 +110,11 @@ def visualize(struct: XasStructure, radius: float = 2.5, unitcell: bool = False)
     for idx, elem in enumerate(elems):
         color_elems[elem] = colors[idx]
 
+    covalent_r = CovalentRadius().radius
+
     for elem in elems:
         color = color_elems[elem]
+        sphere_r = max(0.2, min(covalent_r.get(elem, 0.5) / 2, 0.75))
         xyzview.setStyle(
             {"elem": elem},
             {
@@ -119,7 +124,7 @@ def visualize(struct: XasStructure, radius: float = 2.5, unitcell: bool = False)
                     "hidden": False,
                     "color": color,
                 },
-                "sphere": {"color": color, "radius": 0.4, "opacity": 1},
+                "sphere": {"color": color, "radius": sphere_r, "opacity": 1},
             },
         )
 
