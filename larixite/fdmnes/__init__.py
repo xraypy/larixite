@@ -1,1 +1,1 @@
-from .input import FdmnesXasInput
+from .input import FdmnesXasInput, struct2fdmnes
