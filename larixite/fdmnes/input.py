@@ -218,7 +218,7 @@ class FdmnesXasInput:
             self.vmax = -6
             logger.info(f"Vmax set to {self.vmax} for molecule")
 
-        #enable SCF
+        #: enable SCF
         params["SCF"] = True
         logger.info("SCF enabled")
 
@@ -405,6 +405,7 @@ class FdmnesXasInput:
             fp.write(f"1\n{fileout_name}\n")
             logger.info(f"written {fp.name}")
         self._jobs.append(jobdir)
+        _ = self.dump_params(jobdir / f"{self.fileout_prefix}_params.yaml")
         return jobdir
 
     def write_sbatch(self, jobdir: str | Path | None = None, template: str | Path | None = None, ncpus: int = 8):
