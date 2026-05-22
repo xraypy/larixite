@@ -201,7 +201,18 @@ def visualize(struct: XasStructure, radius: float = 2.5, unitcell: bool = False)
     for elem in elems:
         color_elems[elem] = VESTA_COLORS.get(elem, "#888888")
 
+    def _lighten_hex(hex_color: str, factor: float = 0.75) -> str:
+        r = int(int(hex_color[1:3], 16) * factor)
+        g = int(int(hex_color[3:5], 16) * factor)
+        b = int(int(hex_color[5:7], 16) * factor)
+        return "#{:02x}{:02x}{:02x}".format(r, g, b)
+
     covalent_r = CovalentRadius().radius
+
+    absorber_sym = struct.absorber.symbol
+    absorber_color = color_elems.get(absorber_sym, "#888888")
+    absorber_r = max(0.2, min(covalent_r.get(absorber_sym, 0.5) / 2, 0.75))
+    absorber_light = _lighten_hex(absorber_color, 0.8)
 
     for elem in elems:
         color = color_elems[elem]
@@ -219,9 +230,8 @@ def visualize(struct: XasStructure, radius: float = 2.5, unitcell: bool = False)
             },
         )
 
-    absorber_sym = struct.absorber.symbol
-    absorber_r = max(0.2, min(covalent_r.get(absorber_sym, 0.5) / 2, 0.75))
-    absorber_color = color_elems.get(absorber_sym, "#888888")
+    #: reset index 0 style to avoid duplication, then reapply with lighter color
+    xyzview.setStyle({"index": 0}, None)  # clear
     xyzview.setStyle(
         {"index": 0},
         {
@@ -229,9 +239,9 @@ def visualize(struct: XasStructure, radius: float = 2.5, unitcell: bool = False)
                 "radius": 0.1,
                 "opacity": 1,
                 "hidden": False,
-                "color": absorber_color,
+                "color": absorber_light,
             },
-            "sphere": {"color": absorber_color, "radius": absorber_r, "opacity": 0.3},
+            "sphere": {"color": absorber_light, "radius": absorber_r, "opacity": 1},
         },
     )
 
