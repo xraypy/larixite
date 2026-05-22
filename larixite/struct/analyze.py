@@ -286,7 +286,11 @@ def show_coord_env(struct: XasStructure, **kws):
         f"Coord. Env. from absorber atom: {struct.absorber.symbol} "
         f"at site {struct.absorber_sites[0][0]}"
     )
-    print(f"Geometry: {coord_sym}")
+    desc = CE_SYMBOL_DESCRIPTION.get(coord_sym, "")
+    if desc:
+        print(f"Geometry: {coord_sym} ({desc})")
+    else:
+        print(f"Geometry: {coord_sym}")
     print()
 
     header = ["Shell", "Dist. (Ang)", "CN", "Elements"]
