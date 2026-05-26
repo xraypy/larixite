@@ -184,6 +184,7 @@ def get_logger(name="larixite", level="INFO"):
     """Get a custom logger for larixite"""
     logger = logging.getLogger(name)
     logger.setLevel(log_levels[level])
+    logger.propagate = False
     formatter = ColorFormatter()
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
