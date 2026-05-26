@@ -8,11 +8,12 @@ Search FDMNES job directories.
 from dataclasses import dataclass
 from pathlib import Path
 
+import yaml
+import pandas as pd
 from larixite.fdmnes.input import FdmnesXasInput
 from larixite.utils import get_logger
 
 logger = get_logger("larixite.fdmnes.output")
-logger.propagate = False
 
 
 @dataclass
@@ -21,6 +22,8 @@ class FdmnesXasSim:
 
     jobdir: Path
     input: FdmnesXasInput | None = None
+    data: pd.DataFrame | None = None
+    metadata: dict | None = None
 
     @property
     def prefix(self) -> str | None:
@@ -28,6 +31,41 @@ class FdmnesXasSim:
             return self.input.fileout_prefix
         return None
 
+    def load_data(self) -> pd.DataFrame | None:
+        datafile = self.jobdir / f"{self.prefix}.txt"
+        if not datafile.exists():
+            error_msg = "cannot find the calculation output file"
+            logger.error(error_msg)
+            error_file = self.jobdir / "error.yaml"
+            error_file.write_text(
+                yaml.dump({"error": error_msg})
+            )
+            return
+
+        lines = datafile.read_text().splitlines()
+        e_shift: float = 0.0
+        skip = 0
+
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if "=" in stripped:
+                eq_split = stripped.split(" = ", 1)
+                left_vals = [float(v) for v in eq_split[0].split() if v]
+                right_names = [n.strip() for n in eq_split[1].split(",")]
+                int_names = {"Z", "n_edge", "j_edge", "ninit", "ninit1", "natomsym_f"}
+                self.metadata = {
+                    name: int(val) if name in int_names else val
+                    for name, val in zip(right_names, left_vals)
+                }
+                e_shift = self.metadata.get("E_edge", 0.0)
+                skip = i + 2
+            elif stripped.startswith("#"):
+                continue
+            else:
+                break
+
+        self.data = pd.read_csv(datafile, sep=r"\s+", skiprows=skip)
+        self.data.iloc[:, 0] += e_shift
 
 def search_jobs(globstr: str, jobsdir: Path | str | None = None) -> list[FdmnesXasSim]:
     """Search for FDMNES job directories matching a glob pattern.
