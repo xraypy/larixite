@@ -27,7 +27,7 @@ TEMPLATE_FOLDER = Path(Path(__file__).parent.parent, "templates")
 FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Energpho": False,
     "Quadrupole": False,
-    "Polarize": False,  #: -> TODO
+    "Polarize": False,  #: -> TODO: implement giving polarization vectors
     "Density": False,
     "Density_all": False,
     "Green": True,
