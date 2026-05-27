@@ -1,3 +1,3 @@
 """Models for data handled by Larixite"""
 
-from .xas import XasExpData
+from .xas import XasExpData, XasSimData

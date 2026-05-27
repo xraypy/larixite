@@ -12,13 +12,14 @@ import numpy as np
 import yaml
 import pandas as pd
 from larixite.fdmnes.input import FdmnesXasInput
+from larixite.models.xas import XasSimData
 from larixite.utils import get_logger
 
 logger = get_logger("larixite.fdmnes.output")
 
 
 @dataclass
-class FdmnesXasSim:
+class FdmnesXasSim(XasSimData):
     """A FDMNES XAS simulation associated with a job directory."""
 
     jobdir: Path
