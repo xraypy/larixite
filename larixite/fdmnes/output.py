@@ -31,6 +31,20 @@ class FdmnesXasSim:
             return self.input.fileout_prefix
         return None
 
+    @property
+    def efermi(self) -> float:
+        if self.metadata is not None:
+            return self.metadata.get("VO_interstitial", 0)
+        logger.warning("metadata not available, run `load_data()` first")
+        return 0
+
+    @property
+    def e0(self) -> float:
+        if self.metadata is not None:
+            return self.metadata.get("E_edge", 0)
+        logger.warning("metadata not available, , run `load_data()` first")
+        return 0
+
     def load_data(self, shift_energy: bool = False) -> pd.DataFrame | None:
         datafile = self.jobdir / f"{self.prefix}.txt"
         if not datafile.exists():
