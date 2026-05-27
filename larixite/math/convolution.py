@@ -21,10 +21,28 @@ Resources
 .. [GP1202] <http://glowingpython.blogspot.fr/2012/02/convolution-with-numpy.html>
 
 """
+
 import numpy as np
-from .lineshapes import gaussian, lorentzian
+
+s2pi = np.sqrt(2 * np.pi)
+tiny = 1.0e-15
 
 DEBUG = 0
+
+
+def gaussian(x, amplitude=1.0, center=0.0, sigma=1.0):
+    """Return a 1-dimensional Gaussian function."""
+    return (amplitude / (max(tiny, s2pi * sigma))) * np.exp(
+        -((1.0 * x - center) ** 2) / max(tiny, (2 * sigma**2))
+    )
+
+
+def lorentzian(x, amplitude=1.0, center=0.0, sigma=1.0):
+    """Return a 1-dimensional Lorentzian function."""
+    return (amplitude / (1 + ((1.0 * x - center) / max(tiny, sigma)) ** 2)) / max(
+        tiny, (np.pi * sigma)
+    )
+
 
 def polyfit(x, y, deg=1, reverse=False):
     """
@@ -36,6 +54,7 @@ def polyfit(x, y, deg=1, reverse=False):
     if reverse:
         coefs = list(reversed(coefs))
     return list(coefs)
+
 
 def get_ene_index(ene, cen, hwhm):
     """returns the min/max indexes for array ene at (cen-hwhm) and (cen+hwhm)
