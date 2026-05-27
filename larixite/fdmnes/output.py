@@ -8,6 +8,7 @@ Search FDMNES job directories.
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import yaml
 import pandas as pd
 from larixite.fdmnes.input import FdmnesXasInput
@@ -33,31 +34,40 @@ class FdmnesXasSim:
 
     @property
     def efermi(self) -> float:
-        if self.metadata is not None:
-            return self.metadata.get("VO_interstitial", 0)
-        logger.warning("metadata not available, run `load_data()` first")
-        return 0
+        if self.metadata is None:
+            self.load()
+        return self.metadata.get("VO_interstitial", 0)
 
     @property
     def e0(self) -> float:
-        if self.metadata is not None:
-            return self.metadata.get("E_edge", 0)
-        logger.warning("metadata not available, , run `load_data()` first")
-        return 0
+        if self.metadata is None:
+            self.load()
+        return self.metadata.get("E_edge", 0)
 
-    def load_data(self, shift_energy: bool = False) -> pd.DataFrame | None:
+    @property
+    def energy(self, erel: bool = False) -> np.ndarray:
+        if self.data is None:
+            self.load()
+        eout = self.data["Energy"].values
+        return eout + self.e0 if erel else eout
+
+    @property
+    def mu(self) -> np.ndarray:
+        if self.data is None:
+            self.load()
+        return self.data["<xanes>"].values
+
+    def load(self) -> pd.DataFrame | None:
+        """Load the FDMNES output data file and parse the metadata line."""
         datafile = self.jobdir / f"{self.prefix}.txt"
         if not datafile.exists():
             error_msg = "cannot find the calculation output file"
             logger.error(error_msg)
             error_file = self.jobdir / "error.yaml"
-            error_file.write_text(
-                yaml.dump({"error": error_msg})
-            )
+            error_file.write_text(yaml.dump({"error": error_msg}))
             return
 
         lines = datafile.read_text().splitlines()
-        e_shift: float = 0.0
         skiprows = 1
 
         for i, line in enumerate(lines):
@@ -68,21 +78,23 @@ class FdmnesXasSim:
                 eq_split = stripped.split(" = ", 1)
                 left_vals = [float(v) for v in eq_split[0].split() if v]
                 right_names = [n.strip() for n in eq_split[1].split(",")]
-                assert len(left_vals) == len(right_names), "Error parsing the metadata line"
+                assert len(left_vals) == len(right_names), (
+                    "Error parsing the metadata line"
+                )
                 int_names = {"Z", "n_edge", "j_edge", "ninit", "ninit1", "natomsym_f"}
                 self.metadata = {
                     name: int(val) if name in int_names else val
                     for name, val in zip(right_names, left_vals)
                 }
-                e_shift = self.metadata.get("E_edge", 0.0)
                 skiprows = i + 1
-                print(skiprows)
             else:
                 break
 
         self.data = pd.read_csv(datafile, sep=r"\s+", skiprows=skiprows)
-        if shift_energy:
-            self.data.iloc[:, 0] += e_shift
+        assert len(self.data.columns) >= 2, "Output file must have at least two columns"
+        assert "Energy" in self.data.columns, "No 'Energy' column in the output file"
+        assert "<xanes>" in self.data.columns, "No '<xanes>' column in the output file"
+
 
 def search_jobs(globstr: str, jobsdir: Path | str | None = None) -> list[FdmnesXasSim]:
     """Search for FDMNES job directories matching a glob pattern.
