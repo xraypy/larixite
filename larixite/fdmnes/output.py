@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Search FDMNES job directories.
+Handle FDMNES output files.
 """
 
 from dataclasses import dataclass
