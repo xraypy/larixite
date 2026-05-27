@@ -96,11 +96,11 @@ class FdmnesXasSim:
         assert "<xanes>" in self.data.columns, "No '<xanes>' column in the output file"
 
 
-def search_jobs(globstr: str, jobsdir: Path | str | None = None) -> list[FdmnesXasSim]:
+def search_jobs(globstr: str, jobsdir: Path | str | None = None) -> dict[str, FdmnesXasSim]:
     """Search for FDMNES job directories matching a glob pattern.
 
-    For each matching subdirectory that contains a ``*_params.yaml`` file,
-    a :class:`FdmnesXasSim` instance is built via
+    For each matching subdirectory that contains a ``{fileout_prefix}_params.yaml``
+    file, a :class:`FdmnesXasSim` instance is built via
     :meth:`FdmnesXasInput.from_yaml`.
 
     Parameters
@@ -113,17 +113,17 @@ def search_jobs(globstr: str, jobsdir: Path | str | None = None) -> list[FdmnesX
 
     Returns
     -------
-    list[FdmnesXasSim]
-        Sorted list of matching simulation objects.
+    dict[str, FdmnesXasSim]
+        Dictionary mapping ``fileout_prefix`` to matching simulation objects.
     """
     if jobsdir is None:
         jobsdir = Path("~/.larixite/fdmnes").expanduser().resolve()
     if isinstance(jobsdir, str):
         jobsdir = Path(jobsdir).expanduser().resolve()
     if not jobsdir.is_dir():
-        return []
+        return {}
 
-    results: list[FdmnesXasSim] = []
+    results: dict[str, FdmnesXasSim] = {}
     for entry in jobsdir.glob(globstr):
         if not entry.is_dir():
             continue
@@ -131,10 +131,13 @@ def search_jobs(globstr: str, jobsdir: Path | str | None = None) -> list[FdmnesX
         for param_file in entry.glob("*_params.yaml"):
             try:
                 inp = FdmnesXasInput.from_yaml(param_file)
-                results.append(FdmnesXasSim(jobdir=entry, input=inp))
+                expected = entry / f"{inp.fileout_prefix}_params.yaml"
+                if param_file.resolve() != expected.resolve():
+                    continue
+                sim = FdmnesXasSim(jobdir=entry, input=inp)
+                results[inp.fileout_prefix] = sim
             except Exception:
                 continue
 
-    results = sorted(results, key=lambda s: s.jobdir.stat().st_ctime)
     logger.info(f"found {len(results)} job(s) in {jobsdir}")
     return results
