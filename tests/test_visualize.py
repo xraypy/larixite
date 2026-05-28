@@ -1,16 +1,13 @@
 """Tests for larixite.struct.visualize — _cluster_to_xyz, _lighten_hex, VESTA_COLORS, visualize()."""
 
-import math
 from pathlib import Path
 
 import pytest
-import numpy as np
 
 from larixite.struct import get_structure
 from larixite.struct.visualize import (
     HAS_PY3DMOL,
     VESTA_COLORS,
-    _round_up,
     _cluster_to_xyz,
     _lighten_hex,
     visualize,
@@ -31,21 +28,6 @@ def xyz_cuo6():
     return get_structure(STRUCTS / "CuO6_D4h.xyz", "Cu")
 
 
-# ── _round_up ───────────────────────────────────────────────────
-
-
-class TestRoundUp:
-    def test_integer(self):
-        assert _round_up(2.0) == 2.0
-
-    def test_rounds_up(self):
-        assert _round_up(2.31) == 2.31
-
-    def test_rounds_up_small(self):
-        assert _round_up(2.001) == 2.01
-
-    def test_rounds_up_boundary(self):
-        assert _round_up(2.501) == 2.51
 
 
 # ── _cluster_to_xyz ─────────────────────────────────────────────

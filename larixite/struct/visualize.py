@@ -6,7 +6,6 @@
 ===============================================================
 """
 
-import math
 import sys
 
 from pymatgen.analysis.local_env import CovalentRadius
@@ -137,10 +136,6 @@ VESTA_COLORS = {
 }
 
 
-def _round_up(x: float) -> float:
-    return math.ceil(x * 100) / 100
-
-
 def _lighten_hex(hex_color: str, factor: float = 0.75) -> str:
     """Return a darker hex color obtained by scaling each RGB channel by *factor*."""
     r = int(int(hex_color[1:3], 16) * factor)
@@ -149,7 +144,7 @@ def _lighten_hex(hex_color: str, factor: float = 0.75) -> str:
     return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
 
-def _print_color_legend(color_elems: dict[str, str]) -> None:
+def _print_color_legend(color_elems: dict[str, str], natoms: int) -> None:
     """Print a human-readable color legend, adapting to the execution environment.
 
     In Jupyter: renders HTML color swatches.
@@ -164,7 +159,7 @@ def _print_color_legend(color_elems: dict[str, str]) -> None:
             f'<span style="color:{_adjust_font_color(c)};vertical-align:middle;">{e}</span>'
             for e, c in color_elems.items()
         )
-        display(HTML(f'<div style="font-family:sans-serif;font-size:14px;padding:4px;">Colors: {swatches}</div>'))
+        display(HTML(f'<div style="font-family:sans-serif;font-size:14px;padding:4px;">{natoms} atoms — {swatches}</div>'))
         return
     except ImportError:
         pass
@@ -175,11 +170,11 @@ def _print_color_legend(color_elems: dict[str, str]) -> None:
             g = int(hex_color[3:5], 16)
             b = int(hex_color[5:7], 16)
             sys.stdout.write("\x1b[38;2;{};{};{};m{}\x1b[0m ".format(r, g, b, elem))
-        sys.stdout.write("\n")
+        sys.stdout.write(f" ({natoms} atoms)\n")
         return
 
     legend = ", ".join(f"{e}: {VESTA_COLORS.get(e, ('#888888', 'grey'))[1]}" for e in color_elems)
-    logger.info(f"Colors: {legend}")
+    logger.info(f"Colors ({natoms} atoms): {legend}")
 
 
 def _adjust_font_color(hex_color: str, dark: str = "#222222", light: str = "#ffffff") -> str:
@@ -227,8 +222,6 @@ def visualize(struct: XasStructure, radius: float = 2.5, unitcell: bool = False)
     if not HAS_PY3DMOL:
         logger.error("py3Dmol not installed! -> run `pip install py3Dmol`")
         return
-
-    radius = _round_up(radius)
 
     mol = struct.build_cluster(radius=radius)
 
@@ -293,5 +286,5 @@ def visualize(struct: XasStructure, radius: float = 2.5, unitcell: bool = False)
     xyzview.zoomTo()
     xyzview.show()
 
-    _print_color_legend(color_elems)
+    _print_color_legend(color_elems, len(mol))
     return xyzview
