@@ -4,6 +4,30 @@
 """
 3D visualization of XasStructure local environment using py3Dmol
 ===============================================================
+
+TODO (future improvements):
+
+- Add coordination polyhedra around the absorber atom. py3Dmol does not support
+  polyhedron rendering directly. Possible approaches:
+
+  1. **nglview** — the `nglview` Jupyter widget supports `add_polyhedron()` and
+     works directly with pymatgen structures. Could be offered as an alternative
+     backend (e.g. `visualize(..., backend="nglview")`).
+
+  2. **py3Dmol workaround with triangles** — compute the convex hull of the first
+     coordination shell with `scipy.spatial.ConvexHull`, then draw the facets as
+     semi-transparent plane surfaces via `py3Dmol`'s `addSurface()` or by adding
+     dummy atoms at facet centroids with connecting sticks to form a wireframe.
+
+  3. **pymatgen IPyWidgets** — `pymatgen.vis.ipyvolumetric` or `pymatgen.vis` can
+     render structures with coordination environments in interactive HTML.
+
+  4. **Export for VESTA** — write the cluster as a `.vesta` file (VESTA's native
+     format supports polyhedra definitions) so the user can open it in VESTA.
+
+- Expose the pymatgen Molecule cluster for downstream rendering.
+- Support partial occupancy visualization (transparency, multi-snapshot).
+- Allow custom color schemes beyond VESTA.
 """
 
 import sys
