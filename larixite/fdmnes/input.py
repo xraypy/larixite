@@ -9,10 +9,12 @@ Generating FDMNES input files
 spectroscopy (XAS, XES, RIXS) from the atomic structures
 
 """
+
 import time
 import yaml
 from dataclasses import dataclass
 from pathlib import Path
+import subprocess
 from pymatgen.core import __version__ as pymatgen_version, Element, Molecule
 from larixite.struct import get_structure, get_structure_from_text
 from larixite.struct.xas import XasStructure
@@ -408,12 +410,20 @@ class FdmnesXasInput:
         _ = self.dump_params(jobdir / f"{self.fileout_prefix}_params.yaml")
         return jobdir
 
-    def write_sbatch(self, jobdir: str | Path | None = None, template: str | Path | None = None, ncpus: int = 8, nnodes: int = 1, mem_per_cpu: str = "16GB", **kwargs) -> Path:
+    def write_sbatch(
+        self,
+        jobdir: str | Path | None = None,
+        template: str | Path | None = None,
+        ncpus: int = 8,
+        nnodes: int = 1,
+        mem_per_cpu: str = "16GB",
+        **kwargs,
+    ) -> Path:
         """Generates a SBATCH file (SLURM workload manager) using a template
 
         Arguments
         ---------
-        jobdir: str, Path or None  
+        jobdir: str, Path or None
             path to the job directory to write the SBATCH file
             if None: uses last job directory
         template: str, Path or None
@@ -438,15 +448,53 @@ class FdmnesXasInput:
         if isinstance(jobdir, str):
             jobdir = Path(jobdir)
         sbatchout = jobdir / f"{self.fileout_prefix}.sbatch"
-        kwargs = {"jobname": self.fileout_prefix,
-                  "nnodes": nnodes,
-                  "ncpus": ncpus,
-                  "mem_per_cpu": mem_per_cpu,
-                  **kwargs}
+        kwargs = {
+            "jobname": self.fileout_prefix,
+            "nnodes": nnodes,
+            "ncpus": ncpus,
+            "mem_per_cpu": mem_per_cpu,
+            **kwargs,
+        }
         with open(sbatchout, "w") as fp, open(template) as tp:
             fp.write(tp.read().format(**kwargs))
             logger.info(f"written {fp.name}")
         return sbatchout
+
+    def run_sbatch(self, jobdir: Path) -> str | None:
+        """Submit the sbatch script via `sbatch --parsable`.
+
+        Writes `status.yaml` with status=``submitted`` and the SLURM job ID.
+        Returns the job ID on success, None on failure.
+        """
+        sbatch_script = jobdir / f"{self.fileout_prefix}.sbatch"
+        if not sbatch_script.exists():
+            logger.warning(f"No sbatch script found for job {self.fileout_prefix}")
+            return None
+
+        try:
+            result = subprocess.run(
+                ["sbatch", "--parsable", str(sbatch_script)],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            slurm_job_id = result.stdout.strip()
+            status_file = jobdir / "status.yaml"
+            status_file.write_text(
+                yaml.dump(
+                    {
+                        "status": "submitted",
+                        "slurm_job_id": slurm_job_id,
+                    }
+                )
+            )
+            logger.info(
+                f"SUBMITTED job {self.fileout_prefix} (slurm job id: {slurm_job_id})"
+            )
+            return slurm_job_id
+        except subprocess.CalledProcessError as e:
+            logger.error(f"FAILED to submit job {self.fileout_prefix}: {e}")
+            return None
 
     def dump_params(self, yamlpath: str | Path | None = None) -> Path:
         """Dump input parameters to a YAML file
@@ -486,7 +534,9 @@ class FdmnesXasInput:
             if self._jobs:
                 yamlpath = self._jobs[-1] / f"{self.fileout_prefix}_params.yaml"
             else:
-                yamlpath = Path(self.structpath).parent / f"{self.fileout_prefix}_params.yaml"
+                yamlpath = (
+                    Path(self.structpath).parent / f"{self.fileout_prefix}_params.yaml"
+                )
 
         if isinstance(yamlpath, str):
             yamlpath = Path(yamlpath)
