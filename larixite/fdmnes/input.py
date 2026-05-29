@@ -414,9 +414,10 @@ class FdmnesXasInput:
         self,
         jobdir: str | Path | None = None,
         template: str | Path | None = None,
-        ncpus: int = 8,
+        ncpus: int = 12,
         nnodes: int = 1,
         mem_per_cpu: str = "16GB",
+        constraint: str = "",
         **kwargs,
     ) -> Path:
         """Generates a SBATCH file (SLURM workload manager) using a template
@@ -453,6 +454,7 @@ class FdmnesXasInput:
             "nnodes": nnodes,
             "ncpus": ncpus,
             "mem_per_cpu": mem_per_cpu,
+            "constraint": constraint,
             **kwargs,
         }
         with open(sbatchout, "w") as fp, open(template) as tp:
