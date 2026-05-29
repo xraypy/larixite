@@ -479,6 +479,7 @@ class FdmnesXasInput:
                 capture_output=True,
                 text=True,
                 check=True,
+                cwd=jobdir,
             )
             slurm_job_id = result.stdout.strip()
             status_file = jobdir / "status.yaml"
