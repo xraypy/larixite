@@ -15,6 +15,7 @@ import yaml
 from dataclasses import dataclass
 from pathlib import Path
 import subprocess
+import os
 from pymatgen.core import __version__ as pymatgen_version, Element, Molecule
 from larixite.struct import get_structure, get_structure_from_text
 from larixite.struct.xas import XasStructure
@@ -47,6 +48,15 @@ FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "COOP": False,  #: -> TODO
     "Convolution": True,
 }
+
+
+def _clean_env():
+    """Return environment without SLURM_ variables."""
+    env = dict(os.environ)
+    for key in list(env):
+        if key.startswith("SLURM_"):
+            del env[key]
+    return env
 
 
 @dataclass
@@ -480,6 +490,7 @@ class FdmnesXasInput:
                 text=True,
                 check=True,
                 cwd=jobdir,
+                env=_clean_env(),
             )
             slurm_job_id = result.stdout.strip()
             status_file = jobdir / "status.yaml"
