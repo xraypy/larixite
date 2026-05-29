@@ -408,7 +408,7 @@ class FdmnesXasInput:
         _ = self.dump_params(jobdir / f"{self.fileout_prefix}_params.yaml")
         return jobdir
 
-    def write_sbatch(self, jobdir: str | Path | None = None, template: str | Path | None = None, ncpus: int = 8) -> Path:
+    def write_sbatch(self, jobdir: str | Path | None = None, template: str | Path | None = None, ncpus: int = 8, nnodes: int = 1, mem_per_cpu: str = "16GB", **kwargs) -> Path:
         """Generates a SBATCH file (SLURM workload manager) using a template
 
         Arguments
@@ -439,7 +439,10 @@ class FdmnesXasInput:
             jobdir = Path(jobdir)
         sbatchout = jobdir / f"{self.fileout_prefix}.sbatch"
         kwargs = {"jobname": self.fileout_prefix,
-                  "ncpus": ncpus,}
+                  "nnodes": nnodes,
+                  "ncpus": ncpus,
+                  "mem_per_cpu": mem_per_cpu,
+                  **kwargs}
         with open(sbatchout, "w") as fp, open(template) as tp:
             fp.write(tp.read().format(**kwargs))
             logger.info(f"written {fp.name}")
