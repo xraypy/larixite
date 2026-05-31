@@ -14,8 +14,9 @@ import time
 import yaml
 from dataclasses import dataclass
 from pathlib import Path
-import subprocess
 import os
+import shutil
+import subprocess
 from pymatgen.core import __version__ as pymatgen_version, Element, Molecule
 from larixite.struct import get_structure, get_structure_from_text
 from larixite.struct.xas import XasStructure
@@ -39,7 +40,7 @@ FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Spinorbit": False,
     "SCF": False,
     "SCF_exc": False,
-    "R_self": False,
+    "R_self": True,
     "N_self": True,
     "P_self": True,
     "Vmax": False,
@@ -286,12 +287,12 @@ class FdmnesXasInput:
         FDMNES supports various structure types:
             - Crystal  -> Implemented (default)
             - Molecule -> TODO
+            - Cif_file -> Implemented
             - Film  -> Not implemented yet
             - Surface  -> Not implemented yet
             - Interface  -> Not implemented yet
             - Pdb_file  -> Not implemented yet
             - Film_Pdb_file  -> Not implemented yet
-            - Cif_file  -> Not implemented yet
             - Film_Cif_file  -> Not implemented yet
 
         """
@@ -344,6 +345,11 @@ class FdmnesXasInput:
                 ):
                     sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.3f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
                     structout.append(sitestr)
+        elif "cif" in struct_type.lower():
+            structout.append("Z_absorber")
+            structout.append(f"{self.spacer}{self.absorber.Z}")
+            structout.append("Cif_file")
+            structout.append(f"{self.spacer}{Path(self._xs.filepath).name}")
         elif "mol" in struct_type.lower():
             #: build the cluster and map by distance from absorber at (0,0,0)
             mol = self._xs.cluster
@@ -441,6 +447,10 @@ class FdmnesXasInput:
         with open(jobdir / "fdmfile.txt", "w") as fp:
             fp.write(f"1\n{fileout_name}\n")
             logger.info(f"written {fp.name}")
+        if self.struct_type is not None and "cif" in self.struct_type.lower():
+            src = Path(self._xs.filepath)
+            shutil.copy2(src, jobdir)
+            logger.info(f"copied {src.name} to {jobdir}")
         self._jobs.append(jobdir)
         _ = self.dump_params(jobdir / f"{self.fileout_prefix}_params.yaml")
         return jobdir
