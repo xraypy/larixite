@@ -84,6 +84,8 @@ class FdmnesXasInput:
         0  #: index of the frame inside the structure (e.g. for multi-frame XYZ files)
     )
     radius: float = 7  #: radius of the calculation
+    green: bool = True  #: use muffin-tin approximation
+    scf: bool = False  #: enable SCF
     erange: str = "-10.0 0.25 60.0 1.0 100.0"  #: energy range
     rself: float | None = None  #: radius for the SCF calculation
     nself: int = 100  #: number of maximum iterations for the SCF calculation
@@ -124,6 +126,8 @@ class FdmnesXasInput:
         #: parameters
         if self.params is None:
             self.params = FDMNES_DEFAULT_PARAMS
+        self.params["Green"] = self.green
+        self.params["SCF"] = self.scf
         #: radius
         self.set_radius(self.radius)
         #: R_self
@@ -171,25 +175,17 @@ class FdmnesXasInput:
         #: store a list of jobs
         self._jobs = []
 
+    def __setattr__(self, name: str, value):
+        """Sync green/scf with params dict on assignment"""
+        super().__setattr__(name, value)
+        if name == "green" and hasattr(self, "params") and self.params is not None:
+            self.params["Green"] = value
+        elif name == "scf" and hasattr(self, "params") and self.params is not None:
+            self.params["SCF"] = value
+
     @property
     def xs(self):
         return self._xs
-
-    @property
-    def green(self):
-        return self.params["Green"]
-
-    @green.setter
-    def green(self, val):
-        self.params["Green"] = val
-
-    @property
-    def scf(self):
-        return self.params["SCF"]
-
-    @scf.setter
-    def scf(self, val):
-        self.params["SCF"] = val
 
     def set_radius(self, value: float):
         self.radius = value
