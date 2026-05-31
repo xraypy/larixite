@@ -53,7 +53,7 @@ FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "COOP": False,  #: -> TODO
     "Convolution": True,
     "E_cut": False,  #: taken from E_fermi
-    "Dec": True,  #: energy shift
+    "Dec": False,  #: apply energy shift by E_cut
     "Ecent": True,  #: arctan center
     "Elarg": True,  #: arctan width
     "Gamma_hole": False,  #: use core-hole broadening
@@ -102,7 +102,6 @@ class FdmnesXasInput:
     spacer: str = "   "  #: spacer string for the FDMNES input text
     outdir: str | Path | None = None  #: path to the output directory of the FDMNES jobs
     ecut: float | str | None = None  #: energy cutoff for the convolution
-    dec: float = 0  #: energy shift for the convolution
     ecent: float = 30.  #: energy center for the convolution
     elarg: float = 30.  #: energy width for the convolution
     gamma_hole: float | str | None = None  #: start width of the energy convolution (None -> core-hole broadening)
@@ -412,7 +411,6 @@ class FdmnesXasInput:
             "struct_type": self.struct_type,
             "structure": self.get_structure(struct_type=struct_type),
             "ecut": f"{self.spacer}{self.ecut}",
-            "dec": f"{self.spacer}{self.dec}",
             "ecent": f"{self.spacer}{self.ecent}",
             "elarg": f"{self.spacer}{self.elarg}",
             "gamma_hole": f"{self.spacer}{self.gamma_hole}",
