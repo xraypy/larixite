@@ -120,6 +120,9 @@ class FdmnesXasInput:
             self.structpath = self._xs.filepath
         else:
             self._xs = get_structure(self.structpath, absorber=self.absorber)
+        #: parameters
+        if self.params is None:
+            self.params = FDMNES_DEFAULT_PARAMS
         #: radius
         self.set_radius(self.radius)
         #: R_self
@@ -145,9 +148,6 @@ class FdmnesXasInput:
             self.tmplpath = Path(self.tmplpath)
         #: absorption edge
         self.validate_edge()
-        #: parameters
-        if self.params is None:
-            self.params = FDMNES_DEFAULT_PARAMS
         #: optimize params
         if self.optimize:
             self.params = self.optimize_params()
