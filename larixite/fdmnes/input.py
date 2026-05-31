@@ -39,6 +39,10 @@ FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Spinorbit": False,
     "SCF": False,
     "SCF_exc": False,
+    "R_self": False,
+    "N_self": True,
+    "P_self": True,
+    "Vmax": False,
     "Screening": False,  #: -> TODO
     "Dilatorb": False,  #: -> TODO
     "TDDFT": False,
@@ -47,6 +51,12 @@ FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Atom_conf": False,  #: preferred over `Atom` (permits to keep atomic number in the list of atoms) -> TODO
     "COOP": False,  #: -> TODO
     "Convolution": True,
+    "E_cut": False,  #: taken from E_fermi
+    "Dec": True,  #: energy shift
+    "Ecent": True,  #: arctan center
+    "Elarg": True,  #: arctan width
+    "Gamma_hole": False,  #: use core-hole broadening
+    "Gamma_max": True,
 }
 
 
@@ -77,7 +87,7 @@ class FdmnesXasInput:
     rself: float | None = None  #: radius for the SCF calculation
     nself: int = 100  #: number of maximum iterations for the SCF calculation
     pself: float = 0.025  #: initial weight for the SCF calculation
-    vmax: float | None = None  #: maximum potential value for molecules
+    vmax: float | str | None = None  #: maximum potential value for molecules
     fileout_prefix: str = (
         "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
     )
@@ -88,6 +98,12 @@ class FdmnesXasInput:
     optimize: bool = False  #: optimize the input parameters
     spacer: str = "   "  #: spacer string for the FDMNES input text
     outdir: str | Path | None = None  #: path to the output directory of the FDMNES jobs
+    ecut: float | str | None = None  #: energy cutoff for the convolution
+    dec: float = 0  #: energy shift for the convolution
+    ecent: float = 30.  #: energy center for the convolution
+    elarg: float = 30.  #: energy width for the convolution
+    gamma_hole: float | str | None = None  #: start width of the energy convolution (None -> core-hole broadening)
+    gamma_max: float = 8  #: maximum energy for the convolution
 
     def __post_init__(self):
         """Validate and optimize attributes"""
@@ -109,6 +125,14 @@ class FdmnesXasInput:
         #: R_self
         if self.rself is None:
             self.set_rself()
+        else:
+            self.params["R_self"] = True
+        #: atictivate Vmax if given by the user
+        if self.vmax is None:
+            self.params["Vmax"] = False
+            self.vmax = "!"
+        else:
+            self.params["Vmax"] = True
         #: structure type
         if self.struct_type is None:
             self.struct_type = self._xs.struct_type
@@ -132,7 +156,17 @@ class FdmnesXasInput:
             self.outdir = Path(self.outdir)
         if self.outdir is None:
             self.outdir = Path.home() / ".larixite" / "fdmnes"
-
+        #: CONVOLUTION
+        if self.ecut is None:
+            self.params["E_cut"] = False
+            self.ecut = "!"
+        else:
+            self.params["E_cut"] = True
+        if self.gamma_hole is None:
+            self.params["Gamma_hole"] = False
+            self.gamma_hole = "!"
+        else:
+            self.params["Gamma_hole"] = True
         #: store a list of jobs
         self._jobs = []
 
@@ -227,11 +261,12 @@ class FdmnesXasInput:
             )
 
         if "mol" in self.struct_type.lower():
+            params["Vmax"] = True
             self.vmax = -6
-            logger.info(f"Vmax set to {self.vmax} for molecule")
+            logger.info(f"Molecule: Vmax enablend and set to {self.vmax}")
 
         #: enable SCF
-        params["SCF"] = True
+        self.scf = True
         logger.info("SCF enabled")
 
         return params
@@ -337,22 +372,6 @@ class FdmnesXasInput:
             raise AttributeError(errmsg)
         return "\n".join(structout)
 
-    def get_vmax(self) -> str:
-        """Get the Vmax section of the input"""
-        if self.vmax is not None:
-            vmax = ["Vmax"]
-            vmax.append(f"{self.spacer}-6")
-            return "\n".join(vmax)
-        else:
-            return "! Vmax"
-
-    def get_rself(self):
-        """Get the R_self section of the input"""
-        if self.rself is not None:
-            return f"{self.spacer}{self.rself}"
-        else:
-            return "!"
-
     def get_input(
         self,
         comment: str = "",
@@ -384,12 +403,18 @@ class FdmnesXasInput:
             "edge": f"{self.spacer}{self.edge}",
             "radius": f"{self.spacer}{self.radius:.2f}",
             "erange": self.spacer + self.erange,
-            "vmax": self.get_vmax(),
-            "rself": self.get_rself(),
+            "rself": f"{self.spacer}{self.rself}",
             "nself": f"{self.spacer}{self.nself}",
-            "pself": f"{self.spacer}{self.pself:.3f}",
+            "pself": f"{self.spacer}{self.pself}",
+            "vmax": f"{self.spacer}{self.vmax}",
             "struct_type": self.struct_type,
             "structure": self.get_structure(struct_type=struct_type),
+            "ecut": f"{self.spacer}{self.ecut}",
+            "dec": f"{self.spacer}{self.dec}",
+            "ecent": f"{self.spacer}{self.ecent}",
+            "elarg": f"{self.spacer}{self.elarg}",
+            "gamma_hole": f"{self.spacer}{self.gamma_hole}",
+            "gamma_max": f"{self.spacer}{self.gamma_max}",
         }
         for parkey, parval in params.items():
             conf[parkey] = str(parkey) if parval is True else f"! {parkey}"
