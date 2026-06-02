@@ -91,12 +91,8 @@ class FdmnesXasInput:
     nself: int = 100  #: number of maximum iterations for the SCF calculation
     pself: float = 0.025  #: initial weight for the SCF calculation
     vmax: float | str | None = None  #: maximum potential value for molecules
-    fileout_prefix: str = (
-        "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
-    )
-    tmplpath: str | Path | None = (
-        None  #: path to the templates directory (FDMNES inputs and sbatch)
-    )
+    fileout_prefix: str | None = None  #: prefix for the FDMNES job (deafault: "job" / extension: .inp)
+    tmplpath: str | Path | None = None  #: path to the templates directory
     params: dict[str, bool] | None = None  #: enable/disable parameters for FDMNES
     optimize: bool = False  #: optimize the input parameters
     spacer: str = "   "  #: spacer string for the FDMNES input text
@@ -122,6 +118,8 @@ class FdmnesXasInput:
             self.structpath = self._xs.filepath
         else:
             self._xs = get_structure(self.structpath, absorber=self.absorber)
+        if self.fileout_prefix is None:
+            self.fileout_prefix = "job"
         #: parameters
         if self.params is None:
             self.params = FDMNES_DEFAULT_PARAMS
