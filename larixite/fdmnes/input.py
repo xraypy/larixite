@@ -58,6 +58,7 @@ FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Elarg": True,  #: arctan width
     "Gamma_hole": False,  #: use core-hole broadening
     "Gamma_max": True,
+    "Gaussian": False,
 }
 
 
@@ -102,6 +103,8 @@ class FdmnesXasInput:
     elarg: float = 30.  #: energy width for the convolution
     gamma_hole: float | str | None = None  #: start width of the energy convolution (None -> core-hole broadening)
     gamma_max: float = 8  #: maximum energy for the convolution
+    gaussian: float | str | None = None  #: gaussian broadening (= experimental braodening)
+    estart: float | str | None = None  #: starting energy for the output spectrum
 
     def __post_init__(self):
         """Validate and optimize attributes"""
@@ -169,6 +172,16 @@ class FdmnesXasInput:
             self.gamma_hole = "!"
         else:
             self.params["Gamma_hole"] = True
+        if self.gaussian is None:
+            self.params["Gaussian"] = False
+            self.gaussian = "!"
+        else:
+            self.params["Gaussian"] = True
+        if self.estart is None:
+            self.params["Estart"] = False
+            self.estart = "!"
+        else:
+            self.params["Estart"] = True
         #: store a list of jobs
         self._jobs = []
 
@@ -413,6 +426,8 @@ class FdmnesXasInput:
             "elarg": f"{self.spacer}{self.elarg}",
             "gamma_hole": f"{self.spacer}{self.gamma_hole}",
             "gamma_max": f"{self.spacer}{self.gamma_max}",
+            "gaussian": f"{self.spacer}{self.gaussian}",
+            "estart": f"{self.spacer}{self.estart}",
         }
         for parkey, parval in params.items():
             conf[parkey] = str(parkey) if parval is True else f"! {parkey}"
