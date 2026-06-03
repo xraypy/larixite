@@ -469,7 +469,9 @@ class FdmnesXasInput:
         ncpus: int = 12,
         nnodes: int = 1,
         mem_per_cpu: str = "16GB",
+        walltime: str = "8:00:00",
         constraint: str = "",
+        partition: str = "nice,nice-long",
         **kwargs,
     ) -> Path:
         """Generates a SBATCH file (SLURM workload manager) using a template
@@ -506,7 +508,9 @@ class FdmnesXasInput:
             "nnodes": nnodes,
             "ncpus": ncpus,
             "mem_per_cpu": mem_per_cpu,
+            "walltime": walltime,
             "constraint": constraint,
+            "partition": partition,
             **kwargs,
         }
         with open(sbatchout, "w") as fp, open(template) as tp:

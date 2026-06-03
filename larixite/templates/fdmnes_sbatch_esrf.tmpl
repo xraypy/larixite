@@ -3,8 +3,8 @@
 #SBATCH --ntasks-per-node={ncpus} #: Total number of tasks (=CPUs cores) per node
 #SBATCH --cpus-per-task=1  #: CPUs for each task / DON'T CHANGE THIS - required by FDMNES
 #SBATCH --mem-per-cpu={mem_per_cpu}  #: Total memory for each CPU
-#SBATCH --time=120:00:00  #: Wall-time limit
-#SBATCH --partition=nice,nice-long  #: ESRF cluster
+#SBATCH --time={walltime}  #: Wall-time limit
+#SBATCH --partition="{partition}"  #: ESRF cluster
 #SBATCH --constraint="{constraint}"
 #SBATCH --job-name="{jobname}"  #: Name used to set the output files 
 #SBATCH --output="{jobname}_slurm.stdout"
