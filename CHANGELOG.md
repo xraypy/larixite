@@ -14,9 +14,19 @@ The versioning scheme followed is `YYYY.MAJOR.MINOR`:
 
 ## [2026.2.0 - not released yet]
 
-### `fmdnes`
+### `fdmnes`
 
-    - Create a `fdmnes` module
+    - Create a `fdmnes` module with refactored input handling (`fdmnes/input.py`)
+    - Added output parsing and YAML store/restore for input configurations
+    - Extended sbatch options and improved SLURM job controls
+
+### `struct`
+
+    - Migration of coordination environment analysis and visualization from `struct2xas` into separate modules `analyze` and `visualize`
+
+### Tests
+
+    - Added tests for analysis, visualization, and fdmnes input modules
 
 ## [2026.1.0 - 18-May-2026]
 
