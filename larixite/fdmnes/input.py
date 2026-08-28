@@ -9,23 +9,29 @@ Generating FDMNES input files
 spectroscopy (XAS, XES, RIXS) from the atomic structures
 
 """
+
 import time
+import yaml
 from dataclasses import dataclass
 from pathlib import Path
+import os
+import shutil
+import subprocess
 from pymatgen.core import __version__ as pymatgen_version, Element, Molecule
 from larixite.struct import get_structure, get_structure_from_text
 from larixite.struct.xas import XasStructure
 from larixite.utils import get_logger, strict_ascii, isotime, read_textfile
 from larixite.version import __version__ as larixite_version
 
+
 logger = get_logger("larixite.fdmnes")
 
-TEMPLATE_FOLDER = Path(Path(__file__).parent, "templates")
+TEMPLATE_FOLDER = Path(Path(__file__).parent.parent, "templates")
 
 FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Energpho": False,
     "Quadrupole": False,
-    "Polarize": False,  #: -> TODO
+    "Polarize": False,  #: -> TODO: implement giving polarization vectors
     "Density": False,
     "Density_all": False,
     "Green": True,
@@ -34,6 +40,10 @@ FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Spinorbit": False,
     "SCF": False,
     "SCF_exc": False,
+    "R_self": True,
+    "N_self": True,
+    "P_self": True,
+    "Vmax": False,
     "Screening": False,  #: -> TODO
     "Dilatorb": False,  #: -> TODO
     "TDDFT": False,
@@ -42,7 +52,23 @@ FDMNES_DEFAULT_PARAMS = {  #: "FDMNES key name": True/False
     "Atom_conf": False,  #: preferred over `Atom` (permits to keep atomic number in the list of atoms) -> TODO
     "COOP": False,  #: -> TODO
     "Convolution": True,
+    "E_cut": False,  #: taken from E_fermi
+    "Dec": False,  #: apply energy shift by E_cut
+    "Ecent": True,  #: arctan center
+    "Elarg": True,  #: arctan width
+    "Gamma_hole": False,  #: use core-hole broadening
+    "Gamma_max": True,
+    "Gaussian": False,
 }
+
+
+def _clean_env():
+    """Return environment without SLURM_ variables."""
+    env = dict(os.environ)
+    for key in list(env):
+        if key.startswith("SLURM_"):
+            del env[key]
+    return env
 
 
 @dataclass
@@ -59,21 +85,26 @@ class FdmnesXasInput:
         0  #: index of the frame inside the structure (e.g. for multi-frame XYZ files)
     )
     radius: float = 7  #: radius of the calculation
+    green: bool = True  #: use muffin-tin approximation
+    scf: bool = False  #: enable SCF
     erange: str = "-10.0 0.25 60.0 1.0 100.0"  #: energy range
     rself: float | None = None  #: radius for the SCF calculation
     nself: int = 100  #: number of maximum iterations for the SCF calculation
     pself: float = 0.025  #: initial weight for the SCF calculation
-    vmax: float | None = None  #: maximum potential value for molecules
-    fileout_prefix: str = (
-        "job"  #: prefix of the output filename for the FDMNES job (extension: .inp)
-    )
-    tmplpath: str | Path | None = (
-        None  #: path to the templates directory (FDMNES inputs and sbatch)
-    )
+    vmax: float | str | None = None  #: maximum potential value for molecules
+    fileout_prefix: str | None = None  #: prefix for the FDMNES job (deafault: "job" / extension: .inp)
+    tmplpath: str | Path | None = None  #: path to the templates directory
     params: dict[str, bool] | None = None  #: enable/disable parameters for FDMNES
     optimize: bool = False  #: optimize the input parameters
     spacer: str = "   "  #: spacer string for the FDMNES input text
     outdir: str | Path | None = None  #: path to the output directory of the FDMNES jobs
+    ecut: float | str | None = None  #: energy cutoff for the convolution
+    ecent: float = 30.  #: energy center for the convolution
+    elarg: float = 30.  #: energy width for the convolution
+    gamma_hole: float | str | None = None  #: start width of the energy convolution (None -> core-hole broadening)
+    gamma_max: float = 8  #: maximum energy for the convolution
+    gaussian: float | str | None = None  #: gaussian broadening (= experimental braodening)
+    estart: float | str | None = None  #: starting energy for the output spectrum
 
     def __post_init__(self):
         """Validate and optimize attributes"""
@@ -90,11 +121,26 @@ class FdmnesXasInput:
             self.structpath = self._xs.filepath
         else:
             self._xs = get_structure(self.structpath, absorber=self.absorber)
+        if self.fileout_prefix is None:
+            self.fileout_prefix = "job"
+        #: parameters
+        if self.params is None:
+            self.params = FDMNES_DEFAULT_PARAMS
+        self.params["Green"] = self.green
+        self.params["SCF"] = self.scf
         #: radius
         self.set_radius(self.radius)
         #: R_self
         if self.rself is None:
             self.set_rself()
+        else:
+            self.params["R_self"] = True
+        #: atictivate Vmax if given by the user
+        if self.vmax is None:
+            self.params["Vmax"] = False
+            self.vmax = "!"
+        else:
+            self.params["Vmax"] = True
         #: structure type
         if self.struct_type is None:
             self.struct_type = self._xs.struct_type
@@ -107,9 +153,6 @@ class FdmnesXasInput:
             self.tmplpath = Path(self.tmplpath)
         #: absorption edge
         self.validate_edge()
-        #: parameters
-        if self.params is None:
-            self.params = FDMNES_DEFAULT_PARAMS
         #: optimize params
         if self.optimize:
             self.params = self.optimize_params()
@@ -118,29 +161,41 @@ class FdmnesXasInput:
             self.outdir = Path(self.outdir)
         if self.outdir is None:
             self.outdir = Path.home() / ".larixite" / "fdmnes"
-
+        #: CONVOLUTION
+        if self.ecut is None:
+            self.params["E_cut"] = False
+            self.ecut = "!"
+        else:
+            self.params["E_cut"] = True
+        if self.gamma_hole is None:
+            self.params["Gamma_hole"] = False
+            self.gamma_hole = "!"
+        else:
+            self.params["Gamma_hole"] = True
+        if self.gaussian is None:
+            self.params["Gaussian"] = False
+            self.gaussian = "!"
+        else:
+            self.params["Gaussian"] = True
+        if self.estart is None:
+            self.params["Estart"] = False
+            self.estart = "!"
+        else:
+            self.params["Estart"] = True
         #: store a list of jobs
         self._jobs = []
+
+    def __setattr__(self, name: str, value):
+        """Sync green/scf with params dict on assignment"""
+        super().__setattr__(name, value)
+        if name == "green" and hasattr(self, "params") and self.params is not None:
+            self.params["Green"] = value
+        elif name == "scf" and hasattr(self, "params") and self.params is not None:
+            self.params["SCF"] = value
 
     @property
     def xs(self):
         return self._xs
-
-    @property
-    def green(self):
-        return self.params["Green"]
-
-    @green.setter
-    def green(self, val):
-        self.params["Green"] = val
-
-    @property
-    def scf(self):
-        return self.params["SCF"]
-
-    @scf.setter
-    def scf(self, val):
-        self.params["SCF"] = val
 
     def set_radius(self, value: float):
         self.radius = value
@@ -213,10 +268,12 @@ class FdmnesXasInput:
             )
 
         if "mol" in self.struct_type.lower():
+            params["Vmax"] = True
             self.vmax = -6
-            logger.info(f"Vmax set to {self.vmax} for molecule")
+            logger.info(f"Molecule: Vmax enablend and set to {self.vmax}")
 
-        #enable SCF
+        #: enable SCF
+        self.scf = True
         params["SCF"] = True
         logger.info("SCF enabled")
 
@@ -237,12 +294,12 @@ class FdmnesXasInput:
         FDMNES supports various structure types:
             - Crystal  -> Implemented (default)
             - Molecule -> TODO
+            - Cif_file -> Implemented
             - Film  -> Not implemented yet
             - Surface  -> Not implemented yet
             - Interface  -> Not implemented yet
             - Pdb_file  -> Not implemented yet
             - Film_Pdb_file  -> Not implemented yet
-            - Cif_file  -> Not implemented yet
             - Film_Cif_file  -> Not implemented yet
 
         """
@@ -295,6 +352,11 @@ class FdmnesXasInput:
                 ):
                     sitestr = f"{elem.Z:>3d} {site.a:15.10f} {site.b:15.10f} {site.c:15.10f} {occupancy:>5.3f} !{site.label:>4s} {wyckoff:>4s} {elstr:>4s}"
                     structout.append(sitestr)
+        elif "cif" in struct_type.lower():
+            structout.append("Z_absorber")
+            structout.append(f"{self.spacer}{self.absorber.Z}")
+            structout.append("Cif_file")
+            structout.append(f"{self.spacer}{Path(self._xs.filepath).name}")
         elif "mol" in struct_type.lower():
             #: build the cluster and map by distance from absorber at (0,0,0)
             mol = self._xs.cluster
@@ -322,22 +384,6 @@ class FdmnesXasInput:
             logger.error(errmsg)
             raise AttributeError(errmsg)
         return "\n".join(structout)
-
-    def get_vmax(self) -> str:
-        """Get the Vmax section of the input"""
-        if self.vmax is not None:
-            vmax = ["Vmax"]
-            vmax.append(f"{self.spacer}-6")
-            return "\n".join(vmax)
-        else:
-            return "! Vmax"
-
-    def get_rself(self):
-        """Get the R_self section of the input"""
-        if self.rself is not None:
-            return f"{self.spacer}{self.rself}"
-        else:
-            return "!"
 
     def get_input(
         self,
@@ -370,12 +416,19 @@ class FdmnesXasInput:
             "edge": f"{self.spacer}{self.edge}",
             "radius": f"{self.spacer}{self.radius:.2f}",
             "erange": self.spacer + self.erange,
-            "vmax": self.get_vmax(),
-            "rself": self.get_rself(),
+            "rself": f"{self.spacer}{self.rself}",
             "nself": f"{self.spacer}{self.nself}",
-            "pself": f"{self.spacer}{self.pself:.3f}",
+            "pself": f"{self.spacer}{self.pself}",
+            "vmax": f"{self.spacer}{self.vmax}",
             "struct_type": self.struct_type,
             "structure": self.get_structure(struct_type=struct_type),
+            "ecut": f"{self.spacer}{self.ecut}",
+            "ecent": f"{self.spacer}{self.ecent}",
+            "elarg": f"{self.spacer}{self.elarg}",
+            "gamma_hole": f"{self.spacer}{self.gamma_hole}",
+            "gamma_max": f"{self.spacer}{self.gamma_max}",
+            "gaussian": f"{self.spacer}{self.gaussian}",
+            "estart": f"{self.spacer}{self.estart}",
         }
         for parkey, parval in params.items():
             conf[parkey] = str(parkey) if parval is True else f"! {parkey}"
@@ -402,15 +455,31 @@ class FdmnesXasInput:
         with open(jobdir / "fdmfile.txt", "w") as fp:
             fp.write(f"1\n{fileout_name}\n")
             logger.info(f"written {fp.name}")
+        if self.struct_type is not None and "cif" in self.struct_type.lower():
+            src = Path(self._xs.filepath)
+            shutil.copy2(src, jobdir)
+            logger.info(f"copied {src.name} to {jobdir}")
         self._jobs.append(jobdir)
+        _ = self.dump_params(jobdir / f"{self.fileout_prefix}_params.yaml")
         return jobdir
 
-    def write_sbatch(self, jobdir: str | Path | None = None, template: str | Path | None = None, ncpus: int = 8):
+    def write_sbatch(
+        self,
+        jobdir: str | Path | None = None,
+        template: str | Path | None = None,
+        ncpus: int = 12,
+        nnodes: int = 1,
+        mem_per_cpu: str = "16GB",
+        walltime: str = "8:00:00",
+        constraint: str = "",
+        partition: str = "nice,nice-long",
+        **kwargs,
+    ) -> Path:
         """Generates a SBATCH file (SLURM workload manager) using a template
 
         Arguments
         ---------
-        jobdir: str, Path or None  
+        jobdir: str, Path or None
             path to the job directory to write the SBATCH file
             if None: uses last job directory
         template: str, Path or None
@@ -435,11 +504,131 @@ class FdmnesXasInput:
         if isinstance(jobdir, str):
             jobdir = Path(jobdir)
         sbatchout = jobdir / f"{self.fileout_prefix}.sbatch"
-        kwargs = {"jobname": self.fileout_prefix,
-                  "ncpus": ncpus,}
+        kwargs = {
+            "jobname": self.fileout_prefix,
+            "nnodes": nnodes,
+            "ncpus": ncpus,
+            "mem_per_cpu": mem_per_cpu,
+            "walltime": walltime,
+            "constraint": constraint,
+            "partition": partition,
+            **kwargs,
+        }
         with open(sbatchout, "w") as fp, open(template) as tp:
             fp.write(tp.read().format(**kwargs))
             logger.info(f"written {fp.name}")
+        return sbatchout
+
+    def run_sbatch(self, jobdir: Path) -> str | None:
+        """Submit the sbatch script via `sbatch --parsable`.
+
+        Writes `status.yaml` with status=``submitted`` and the SLURM job ID.
+        Returns the job ID on success, None on failure.
+        """
+        sbatch_script = jobdir / f"{self.fileout_prefix}.sbatch"
+        if not sbatch_script.exists():
+            logger.warning(f"No sbatch script found for job {self.fileout_prefix}")
+            return None
+
+        try:
+            result = subprocess.run(
+                ["sbatch", "--parsable", str(sbatch_script)],
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=jobdir,
+                env=_clean_env(),
+            )
+            slurm_job_id = result.stdout.strip()
+            status_file = jobdir / "status.yaml"
+            status_file.write_text(
+                yaml.dump(
+                    {
+                        "status": "submitted",
+                        "slurm_job_id": slurm_job_id,
+                    }
+                )
+            )
+            logger.info(
+                f"SUBMITTED job {self.fileout_prefix} (slurm job id: {slurm_job_id})"
+            )
+            return slurm_job_id
+        except subprocess.CalledProcessError as e:
+            logger.error(f"FAILED to submit job {self.fileout_prefix}: {e}")
+            return None
+
+    def dump_params(self, yamlpath: str | Path | None = None) -> Path:
+        """Dump input parameters to a YAML file
+
+        Parameters
+        ----------
+        yamlpath : str | Path | None
+            path to the output YAML file
+            if None: writes `{jobdir}/{fileout_prefix}_params.yaml`
+            if jobdir doesn't exist yet, writes next to the structural file
+
+        Returns
+        -------
+        Path
+            path to the written YAML file
+        """
+        params_dict = {
+            "structpath": str(self.structpath),
+            "absorber": self.absorber.symbol,
+            "edge": self.edge,
+            "struct_type": self.struct_type,
+            "frame": self.frame,
+            "radius": self.radius,
+            "erange": self.erange,
+            "rself": self.rself,
+            "nself": self.nself,
+            "pself": self.pself,
+            "vmax": self.vmax,
+            "fileout_prefix": self.fileout_prefix,
+            "params": self.params,
+            "optimize": self.optimize,
+            "spacer": self.spacer,
+            "outdir": str(self.outdir) if self.outdir else None,
+        }
+
+        if yamlpath is None:
+            if self._jobs:
+                yamlpath = self._jobs[-1] / f"{self.fileout_prefix}_params.yaml"
+            else:
+                yamlpath = (
+                    Path(self.structpath).parent / f"{self.fileout_prefix}_params.yaml"
+                )
+
+        if isinstance(yamlpath, str):
+            yamlpath = Path(yamlpath)
+
+        with open(yamlpath, "w") as fp:
+            yaml.dump(params_dict, fp, default_flow_style=False)
+        logger.info(f"written {yamlpath.name}")
+        return yamlpath
+
+    @classmethod
+    def from_yaml(cls, yamlpath: str | Path) -> "FdmnesXasInput":
+        """Restore a FdmnesXasInput object from a YAML parameters file
+
+        Parameters
+        ----------
+        yamlpath : str | Path
+            path to the YAML file previously written by `dump_params()`
+
+        Returns
+        -------
+        FdmnesXasInput
+            reconstructed input object
+        """
+        if isinstance(yamlpath, str):
+            yamlpath = Path(yamlpath)
+
+        with open(yamlpath) as fp:
+            params_dict = yaml.safe_load(fp)
+
+        kwargs = {k: v for k, v in params_dict.items() if k != "structpath"}
+        return cls(params_dict["structpath"], **kwargs)
 
 
 def struct2fdmnes(

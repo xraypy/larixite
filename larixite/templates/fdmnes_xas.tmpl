@@ -22,8 +22,8 @@ Radius
 !<Multipolar expansion>
 {Quadrupole}
 !<Polarization and dichroism>
-{Polarize} 
-!  =>TODO
+{Polarize}    ! without giving a vector it calculates non equivalent directions
+!             ! =>TODO: specify polarization and wave vectors
 {TDDFT}
 {Memory_save}
 {Relativism}
@@ -36,17 +36,37 @@ Radius
 {SpGr_atom} !`Full_atom` is default since March 2026
 !<Self-consistent calculations>
 {SCF}
-R_self
+{R_self}
 {rself}
-N_self
+{N_self}
 {nself}
-P_self
+{P_self}
 {pself}
 {SCF_exc}
+!<Maximum potential>
+{Vmax}
 {vmax}
+!<Atomic configutation>
 {Atom_conf}
 !<Structure description with absorber: {struct_type}>
 {structure}
 !<Convolution parameters>
+Conv_out
+{filout}_conv
 {Convolution}
+{E_cut}
+{ecut}
+{Dec}
+{Gamma_hole}
+{gamma_hole}
+{Ecent}
+{ecent}
+{Elarg}
+{elarg}
+{Gamma_max}
+{gamma_max}
+{Gaussian}
+{gaussian}
+{Estart}
+{estart}
 End

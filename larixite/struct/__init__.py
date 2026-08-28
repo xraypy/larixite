@@ -22,6 +22,8 @@ from larixite.struct.xas_cif import XasStructureCif
 from larixite.struct.xas_xyz import XasStructureXyz
 from larixite.utils import get_logger, read_textfile
 from larixite.amcsd_utils import PMG_CIF_OPTS
+from larixite.struct.visualize import visualize
+from larixite.struct.analyze import get_coord_env, show_coord_env
 
 logger = get_logger("larixite.struct")
 

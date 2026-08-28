@@ -30,5 +30,24 @@ def test_fdmnes():
             assert outdir.exists()
 
 
+def test_green_scf_sync():
+    db = get_amcsd()
+    cif = db.get_cif(4438)
+    outfile = cif.write_cif(verbose=True)
+    sg = get_structure(outfile, "Fe")
+
+    f = FdmnesXasInput(sg, absorber="Fe", green=False, scf=True, optimize=False)
+    assert f.green is False
+    assert f.scf is True
+    assert f.params["Green"] is False
+    assert f.params["SCF"] is True
+
+    f.green = True
+    f.scf = False
+    assert f.params["Green"] is True
+    assert f.params["SCF"] is False
+
+
 if __name__ == "__main__":
     test_fdmnes()
+    test_green_scf_sync()
