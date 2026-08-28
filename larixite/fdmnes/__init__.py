@@ -1,1 +1,1 @@
-from .input import FdmnesXasInput, struct2fdmnes
+from .input import FdmnesXasInput, struct2fdmnes, logger

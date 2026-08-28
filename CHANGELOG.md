@@ -16,13 +16,23 @@ The versioning scheme followed is `YYYY.MAJOR.MINOR`:
 
 ### `fdmnes`
 
-    - Create a `fdmnes` module with refactored input handling (`fdmnes/input.py`)
-    - Added output parsing and YAML store/restore for input configurations
-    - Extended sbatch options and improved SLURM job controls
+    - Split `fdmnes.py` into a `fdmnes` package (`fdmnes/input.py`) with refactored input handling; `FdmnesXasInput` and `struct2fdmnes` remain importable from `larixite.fdmnes` as before
+    - Direct `Cif_file` structure type support: a CIF can now be passed straight to FDMNES instead of only an expanded `Crystal` description
+    - Added convolution parameters (`E_cut`, `Dec`, `Ecent`, `Elarg`, `Gamma_hole`, `Gamma_max`, `Gaussian`, `Estart`) and automatic `Conv_out` section in the generated input
+    - `green`/`scf` are now plain attributes kept in sync with `params["Green"]`/`params["SCF"]` (previously computed properties)
+    - Added `run_sbatch()` to submit jobs via `sbatch --parsable` and track status in `status.yaml`
+    - Added `dump_params()` / `from_yaml()` to store and restore a `FdmnesXasInput` configuration as YAML
+    - Extended `write_sbatch()` with `nnodes`, `mem_per_cpu`, `walltime`, `constraint`, `partition` options (default `ncpus` raised from 8 to 12)
+    - Removed the `get_vmax()`/`get_rself()` helper methods; `vmax`/`rself` are now rendered directly from their attribute values (also fixes `Vmax` previously always being written as `-6` regardless of the value set)
 
 ### `struct`
 
-    - Migration of coordination environment analysis and visualization from `struct2xas` into separate modules `analyze` and `visualize`
+    - Migration of coordination environment analysis and visualization from `struct2xas` into separate modules `analyze` and `visualize` (new `py3Dmol`-based 3D visualization, new `pyproject.toml` dependency)
+
+### Bug fixes
+
+    - Fix `FdmnesXasInput(optimize=True)` not actually enabling `SCF` in the generated input despite logging "SCF enabled" (regression introduced during the `fdmnes` refactor, caught before release; affects the web app's FDMNES "optimize" option)
+    - Restore `from larixite.fdmnes import logger`, broken by the module split (used in `examples/fdmnes_xas_workflow.ipynb`)
 
 ### Tests
 

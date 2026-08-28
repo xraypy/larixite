@@ -274,6 +274,7 @@ class FdmnesXasInput:
 
         #: enable SCF
         self.scf = True
+        params["SCF"] = True
         logger.info("SCF enabled")
 
         return params
